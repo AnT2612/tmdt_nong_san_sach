@@ -1,0 +1,34 @@
+# Công cụ hỗ trợ & cấu hình nội bộ (TUYỆT ĐỐI KHÔNG PUSH)
+.agent/
+.claude/
+.impeccable/
+export_tuan5/
+docs/on-tap/
+PRODUCT.md
+DESIGN.md
+README.md
+!backend/README.md
+!frontend/README.md
+*.zip
+DoAnMonHoc.zip
+
+# Môi trường & Dependencies
+.env
+backend/.env
+backend/vendor/
+backend/database/database.sqlite
+backend/.phpunit.result.cache
+frontend/node_modules/
+frontend/dist/
+
+# Logs, Cache & File upload tạm
+backend/storage/logs/*.log
+backend/storage/framework/views/*.php
+backend/storage/app/public/uploads/*
+!backend/storage/app/public/uploads/.gitkeep
+
+# IDE & Hệ điều hành
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
