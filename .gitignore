@@ -1,0 +1,28 @@
+# Environment & Dependencies
+.env
+.env.*
+!.env.example
+backend/.env
+backend/vendor/
+backend/database/database.sqlite
+backend/.phpunit.result.cache
+frontend/node_modules/
+frontend/dist/
+
+# Logs, Cache & Uploads
+backend/storage/logs/*.log
+backend/storage/framework/views/*.php
+backend/storage/app/public/uploads/*
+!backend/storage/app/public/uploads/.gitkeep
+
+# Archives & Local Notes
+*.zip
+README.md
+!backend/README.md
+!frontend/README.md
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

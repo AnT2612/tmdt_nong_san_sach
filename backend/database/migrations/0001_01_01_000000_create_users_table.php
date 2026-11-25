@@ -6,19 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+
+            $table->string('full_name', 100);
+            $table->string('email', 150)->unique();
+            $table->string('phone', 20)->nullable();
             $table->string('password');
+
+            // 5 vai trò đúng theo tài liệu phân tích hệ thống
+            $table->enum('role', [
+                'customer',        // Khách hàng
+                'farm_staff',      // Nhân viên nông trại
+                'warehouse_staff', // Nhân viên kho
+                'sales',           // Nhân viên bán hàng / CSKH
+                'admin',           // Quản trị viên
+            ])->default('customer');
+
+            // Điểm tích luỹ hiện tại (bảng loyalty_transactions là sổ chi tiết)
+            $table->unsignedInteger('loyalty_points')->default(0);
+            $table->enum('status', ['active', 'locked'])->default('active');
+            $table->string('avatar_url', 500)->nullable();
+
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index('role');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -37,13 +52,10 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };
