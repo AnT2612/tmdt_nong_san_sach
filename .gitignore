@@ -14,6 +14,10 @@ DoAnMonHoc.zip
 
 # Môi trường & Dependencies
 .env
+# Environment & Dependencies
+.env
+.env.*
+!.env.example
 backend/.env
 backend/vendor/
 backend/database/database.sqlite
@@ -22,12 +26,20 @@ frontend/node_modules/
 frontend/dist/
 
 # Logs, Cache & File upload tạm
+# Logs, Cache & Uploads
 backend/storage/logs/*.log
 backend/storage/framework/views/*.php
 backend/storage/app/public/uploads/*
 !backend/storage/app/public/uploads/.gitkeep
 
 # IDE & Hệ điều hành
+# Archives & Local Notes
+*.zip
+README.md
+!backend/README.md
+!frontend/README.md
+
+# IDE & OS
 .DS_Store
 Thumbs.db
 .vscode/

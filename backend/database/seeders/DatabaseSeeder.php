@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,    // Phải chạy đầu tiên
             ProductSeeder::class, // Danh mục + sản phẩm
+            UserSeeder::class, // Chạy đầu tiên ở PR #1
         ]);
 
         $this->seedSystemSettings();
