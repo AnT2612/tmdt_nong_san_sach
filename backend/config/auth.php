@@ -16,7 +16,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => 'api',
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -40,6 +40,15 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        /*
+         * Guard dùng cho toàn bộ API. Xác thực bằng JWT Token
+         * (gói php-open-source-saver/jwt-auth).
+         */
+        'api' => [
+            'driver' => 'jwt',
             'provider' => 'users',
         ],
     ],
