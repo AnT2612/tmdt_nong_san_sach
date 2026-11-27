@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\FarmingLogController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SalesOrderController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TraceabilityController;
 use App\Http\Controllers\Api\UserController;
@@ -27,15 +31,41 @@ Route::get('/subscription-plans', [SubscriptionController::class, 'plans']);
 Route::get('/traceability/{token}', [TraceabilityController::class, 'show']);
 Route::get('/traceability/{token}/qr.svg', [TraceabilityController::class, 'qrCode']);
 
+// Cổng thanh toán VNPay Sandbox
+Route::post('/vnpay/create', [VNPayController::class, 'createPayment']);
+Route::get('/vnpay/return', [VNPayController::class, 'returnPayment']);
+Route::get('/vnpay/ipn', [VNPayController::class, 'ipn']);
+
+// Webhook tự động đối soát ngân hàng VietQR
+Route::post('/vietqr/webhook', [PaymentController::class, 'sepayWebhook']);
+Route::post('/sepay/webhook', [PaymentController::class, 'sepayWebhook']);
+
+// Alias tương thích ngược cho payments/vnpay
+Route::post('/payments/vnpay/create', [VNPayController::class, 'createPayment']);
+Route::get('/payments/vnpay/return', [VNPayController::class, 'returnPayment']);
+Route::get('/payments/vnpay/ipn', [VNPayController::class, 'ipn']);
+
 // 2. Tính năng cần đăng nhập (mọi vai trò)
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
+    // Đơn hàng của chính khách
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
     // Gói định kỳ của chính khách
     Route::get('/my-subscriptions', [SubscriptionController::class, 'mySubscriptions']);
     Route::post('/subscriptions/{id}/pause', [SubscriptionController::class, 'pause']);
+});
+
+// 3A. Đặt hàng (cho phép cả khách vãng lai chưa đăng nhập)
+Route::middleware('jwt.optional')->group(function () {
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::post('/orders/{id}/demo-confirm', [OrderController::class, 'demoConfirm']);
+    Route::post('/payments/confirm', [PaymentController::class, 'confirmPayment']);
 });
 
 // 3B. Khách hàng đăng ký gói định kỳ
@@ -45,12 +75,20 @@ Route::middleware(['jwt.auth', 'role:customer'])->group(function () {
 
 // 4. Nhân viên bán hàng / CSKH (Sales)
 Route::middleware(['jwt.auth', 'role:sales,admin'])->group(function () {
+    Route::get('/sales/orders', [SalesOrderController::class, 'index']);
+    Route::post('/sales/orders/{id}/confirm', [SalesOrderController::class, 'confirm']);
+    Route::post('/sales/orders/{id}/ship', [SalesOrderController::class, 'ship']);
+    Route::post('/sales/orders/{id}/deliver', [SalesOrderController::class, 'deliver']);
+    Route::post('/sales/orders/{id}/cancel', [SalesOrderController::class, 'cancel']);
+
     Route::post('/sales/subscriptions/{id}/skip', [SubscriptionController::class, 'skip']);
 });
 
 // 5. Nhân viên nông trại và nhân viên kho
 Route::middleware(['jwt.auth', 'role:farm_staff,warehouse_staff,admin'])->group(function () {
     Route::get('/batches', [BatchController::class, 'index']);
+    Route::get('/batches/{id}/transactions', [BatchController::class, 'transactions']);
+    Route::get('/batches-expiring-soon', [BatchController::class, 'expiringSoon']);
 });
 
 Route::middleware(['jwt.auth', 'role:farm_staff,admin'])->group(function () {
@@ -59,6 +97,11 @@ Route::middleware(['jwt.auth', 'role:farm_staff,admin'])->group(function () {
     Route::get('/batches/{batchId}/farming-logs', [FarmingLogController::class, 'index']);
     Route::post('/batches/{batchId}/farming-logs', [FarmingLogController::class, 'store']);
     Route::delete('/batches/{batchId}/farming-logs/{logId}', [FarmingLogController::class, 'destroy']);
+});
+
+Route::middleware(['jwt.auth', 'role:warehouse_staff,admin'])->group(function () {
+    Route::post('/batches/{id}/harvest', [BatchController::class, 'harvest']);
+    Route::post('/batches/{id}/dispose', [BatchController::class, 'dispose']);
 });
 
 // 6. Quản trị viên (Admin)
