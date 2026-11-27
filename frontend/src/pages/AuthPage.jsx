@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { readError, readFieldErrors } from '../api/client.js'
 import Icon from '../components/Icon.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import './AuthPage.css'
+import '../styles/AuthPage.css'
 
 export default function AuthPage({ mode = 'login' }) {
   const isLogin = mode === 'login'

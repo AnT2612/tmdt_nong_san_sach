@@ -43,47 +43,18 @@ class OrderService
                     ]);
                 }
 
-                $available = $product->totalAvailableQuantity();
-                if ($available < $quantity) {
-                    throw ValidationException::withMessages([
-                        'items' => "{$product->ten_san_pham} chỉ còn {$available} {$product->don_vi_tinh}, không đủ {$quantity} {$product->don_vi_tinh}.",
-                    ]);
-                }
-
                 $unitPrice = $product->currentPrice();
                 $lineTotal = round($unitPrice * $quantity, 0);
                 $subtotal += $lineTotal;
 
                 $preparedItems[] = [
-                    'product'    => $product,
+                    'product_id' => $product->id,
                     'so_luong'   => $quantity,
                     'don_gia'    => $unitPrice,
-                    'thanh_tien' => $lineTotal,
                 ];
             }
 
             $deliveryType = $data['loai_giao'] ?? Order::LOAI_GIAO_THUONG;
-            $shipping = $this->shippingService->calculate(
-                $data['dia_chi_giao'],
-                $subtotal,
-                $deliveryType,
-                isset($data['vi_do']) ? (float) $data['vi_do'] : null,
-                isset($data['kinh_do']) ? (float) $data['kinh_do'] : null,
-            );
-
-            $pointsUsed = 0;
-            $discountAmount = 0.0;
-            $requestedPoints = (int) ($data['diem_su_dung'] ?? 0);
-
-            if ($customer !== null && $requestedPoints > 0) {
-                $pointValue = (int) config('loyalty.point_value', 1000);
-                $pointsUsed = min($requestedPoints, (int) $customer->diem_tich_luy);
-                $maxByAmount = (int) floor(($subtotal + $shipping['phi_van_chuyen']) / $pointValue);
-                $pointsUsed = max(0, min($pointsUsed, $maxByAmount));
-                $discountAmount = (float) ($pointsUsed * $pointValue);
-            }
-
-            $totalAmount = max(0, round($subtotal + $shipping['phi_van_chuyen'] - $discountAmount, 0));
 
             $order = Order::create([
                 'ma_don'            => $this->generateOrderCode(),
@@ -96,25 +67,47 @@ class OrderService
                 'email_nguoi_nhan'  => $data['email_nguoi_nhan'] ?? $customer?->email,
                 'dia_chi_giao'      => $data['dia_chi_giao'],
                 'loai_giao'         => $deliveryType,
-                'phi_van_chuyen'    => $shipping['phi_van_chuyen'],
-                'khoang_cach_km'    => $shipping['khoang_cach_km'],
-                'tong_tien'         => $totalAmount,
-                'diem_su_dung'      => $pointsUsed,
-                'tien_giam_diem'    => $discountAmount,
+                'phi_van_chuyen'    => 0,
+                'khoang_cach_km'    => 0,
+                'tong_tien'         => 0,
+                'diem_su_dung'      => 0,
+                'tien_giam_diem'    => 0,
                 'trang_thai'        => Order::STATUS_CHO_DUYET,
                 'ngay_giao_du_kien' => $data['ngay_giao_du_kien'] ?? now()->toDateString(),
             ]);
 
-            foreach ($preparedItems as $item) {
-                OrderDetail::create([
-                    'order_id'   => $order->id,
-                    'product_id' => $item['product']->id,
-                    'batch_id'   => null,
-                    'so_luong'   => $item['so_luong'],
-                    'don_gia'    => $item['don_gia'],
-                    'thanh_tien' => $item['thanh_tien'],
-                ]);
+            $this->fefoService->allocateAndDeduct($order, $preparedItems);
+
+            $actualSubtotal = (float) $order->orderDetails()->sum('thanh_tien');
+            $shipping = $this->shippingService->calculate(
+                $data['dia_chi_giao'],
+                $actualSubtotal,
+                $deliveryType,
+                isset($data['vi_do']) ? (float) $data['vi_do'] : null,
+                isset($data['kinh_do']) ? (float) $data['kinh_do'] : null,
+            );
+
+            $pointsUsed = 0;
+            $discountAmount = 0.0;
+            $requestedPoints = (int) ($data['diem_su_dung'] ?? 0);
+
+            if ($customer !== null && $requestedPoints > 0) {
+                $pointValue = (int) config('loyalty.point_value', 1000);
+                $pointsUsed = min($requestedPoints, (int) $customer->diem_tich_luy);
+                $maxByAmount = (int) floor(($actualSubtotal + $shipping['phi_van_chuyen']) / $pointValue);
+                $pointsUsed = max(0, min($pointsUsed, $maxByAmount));
+                $discountAmount = (float) ($pointsUsed * $pointValue);
             }
+
+            $totalAmount = max(0, round($actualSubtotal + $shipping['phi_van_chuyen'] - $discountAmount, 0));
+
+            $order->update([
+                'phi_van_chuyen' => $shipping['phi_van_chuyen'],
+                'khoang_cach_km' => $shipping['khoang_cach_km'],
+                'tong_tien'      => $totalAmount,
+                'diem_su_dung'   => $pointsUsed,
+                'tien_giam_diem' => $discountAmount,
+            ]);
 
             if ($customer !== null && $pointsUsed > 0) {
                 $customer->decrement('diem_tich_luy', $pointsUsed);
@@ -136,7 +129,7 @@ class OrderService
                 'created_at'      => now(),
             ]);
 
-            return $order->load(['orderDetails.product', 'payments']);
+            return $order->load(['orderDetails.product', 'orderDetails.batch', 'payments']);
         });
     }
 
@@ -149,7 +142,9 @@ class OrderService
         }
 
         return DB::transaction(function () use ($order) {
-            $this->fefoService->allocateAndDeduct($order);
+            if ($order->orderDetails()->whereNull('batch_id')->exists()) {
+                $this->fefoService->allocateAndDeduct($order);
+            }
 
             $order->trang_thai = Order::STATUS_DA_DUYET;
             $order->save();
@@ -223,7 +218,7 @@ class OrderService
         }
 
         return DB::transaction(function () use ($order) {
-            if (in_array($order->trang_thai, [Order::STATUS_DA_DUYET, Order::STATUS_DANG_GIAO], true)) {
+            if ($order->orderDetails()->whereNotNull('batch_id')->exists()) {
                 $this->fefoService->restoreOrderStock($order);
             }
 
