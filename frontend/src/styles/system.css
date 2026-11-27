@@ -1,27 +1,3 @@
-/* ============================================================================
-   NGƯỜI PHỤ TRÁCH: Đào Quốc Đạt (0306241190)
-   CHỨC NĂNG: Hệ thống thiết kế (design tokens + thành phần cơ bản).
-
-   HƯỚNG THIẾT KẾ: "Bảng lô của nhà đóng gói".
-
-   Ý tưởng: giao diện đọc như hệ thống nhãn thùng và sổ theo dõi lô hàng của
-   một nhà vựa thật - nền xanh nông nghiệp đậm, thẻ hàng là những tấm nhãn
-   kraft, số liệu canh cột như sổ cái, hàng cận hạn đóng dấu đỏ.
-
-   VÌ SAO CHỌN HƯỚNG NÀY:
-   - Đề tài bán nông sản tươi có hạn dùng ngắn. Thứ khách cần thấy không phải
-     ảnh đẹp mà là BẰNG CHỨNG: lô nào, thu hoạch ngày nào, còn mấy ngày.
-   - Các trang TMĐT nông sản thường dùng nền trắng + bo tròn mềm + gradient.
-     Chọn hướng ngược lại để sản phẩm trông như công cụ của người làm nông
-     thật, và để giảng viên thấy được lý do thiết kế.
-
-   NHỮNG THỨ CỐ TÌNH KHÔNG DÙNG:
-   - Không gradient tím-xanh, không glassmorphism.
-   - Không bo tròn mềm 16px cho mọi thứ - dùng góc vuông và góc vát nhẹ.
-   - Không hero + 3 thẻ tính năng đều nhau.
-   - Không emoji thay icon.
-   ========================================================================== */
-
 :root {
   /* ---- Màu ---------------------------------------------------------------
      Nền: xanh nông nghiệp đậm - màu lưới che nắng và thùng nhựa ngoài vườn.

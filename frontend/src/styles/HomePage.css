@@ -1,13 +1,31 @@
-/* ============================================================================
-   NGƯỜI PHỤ TRÁCH: Đào Quốc Đạt (0306241190)
-   CHỨC NĂNG: Trang trí trang chủ và các khối dùng chung.
-
-   BỐ CỤC PHẦN MỞ ĐẦU (điểm quan trọng nhất):
-   - Cột trái 62%: BẢNG LÔ dạng sổ cái, nền xanh đậm, kẻ mảnh, số canh phải.
-   - Cột phải 38%: lời giải thích FEFO + nút mua, nền giấy.
-   Tỉ lệ 62/38 cố tình lệch - bảng số liệu là nhân vật chính, không phải
-   ảnh minh hoạ.
+/* ==========================================================================
+   BANNER TRANG CHỦ
    ========================================================================== */
+
+.hero-banner {
+  background: var(--green-900);
+  padding: var(--s5) 0;
+  border-bottom: 1px solid rgba(246, 243, 234, 0.14);
+}
+
+.hero-banner__link {
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(246, 243, 234, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-banner__link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.hero-banner__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
 
 /* ==========================================================================
    PHẦN MỞ ĐẦU - BẢNG LÔ

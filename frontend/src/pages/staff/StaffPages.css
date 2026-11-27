@@ -1,15 +1,3 @@
-/* ============================================================================
-   NGƯỜI PHỤ TRÁCH: Đào Quốc Đạt (0306241190)
-   CHỨC NĂNG: Trang trí cho cả bốn bảng điều khiển nhân viên.
-
-   ĐÂY LÀ CHẾ ĐỘ "OPERATE": nhân viên dùng nhiều lần mỗi ngày.
-   Nguyên tắc:
-     - Mật độ cao, không có khoảng trắng trang trí.
-     - Mọi thao tác có nút ngay trên dòng, không phải mở trang khác.
-     - Trạng thái dùng màu tem, quét bằng mắt được.
-     - Chữ số lớn ở chỗ cần đọc nhanh (số kg, số đơn).
-   ========================================================================== */
-
 .staff {
   width: min(1240px, 100% - 2.5rem);
   margin-inline: auto;

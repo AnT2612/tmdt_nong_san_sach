@@ -4,7 +4,7 @@ import { apiGet } from '../api/client.js'
 import Icon from '../components/Icon.jsx'
 import ProduceMark from '../components/ProduceMark.jsx'
 import { expiryLevel, formatExpiry, formatMoney, formatQuantity } from '../utils/format.js'
-import './HomePage.css'
+import '../styles/HomePage.css'
 
 export default function HomePage() {
   const [products, setProducts] = useState([])
@@ -41,6 +41,18 @@ export default function HomePage() {
 
   return (
     <>
+      <section className="hero-banner">
+        <div className="wrap">
+          <Link to="/san-pham" className="hero-banner__link" aria-label="Xem sản phẩm Nông Sản Sạch Củ Chi">
+            <img
+              src="/images/banner.jpg"
+              alt="Nông Sản Sạch Củ Chi - Rau củ tươi sạch, đặc sản Củ Chi, quà tặng"
+              className="hero-banner__img"
+            />
+          </Link>
+        </div>
+      </section>
+
       <section className="board">
         <div className="wrap board__grid">
           <div className="board__ledger">

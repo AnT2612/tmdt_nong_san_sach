@@ -19,7 +19,7 @@ const STAFF_LINKS = {
 }
 
 export default function Header() {
-  const { user, logout, hasRole } = useAuth()
+  const { user, logout } = useAuth()
   const { totalQuantity } = useCart()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -65,9 +65,9 @@ export default function Header() {
             </NavLink>
           ))}
 
-          {hasRole('customer') && (
+          {roleName !== 'sales' && roleName !== 'admin' && (
             <NavLink to="/don-hang" className="site-header__link" onClick={closeMenu}>
-              Đơn của tôi
+              Đơn hàng
             </NavLink>
           )}
         </nav>
