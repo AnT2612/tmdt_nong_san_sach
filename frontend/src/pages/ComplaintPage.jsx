@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiGet, apiPost, apiUpload, readError, readFieldErrors } from '../api/client.js'
 import Icon from '../components/Icon.jsx'
 import { COMPLAINT_REASON_LIST, formatMoney } from '../utils/format.js'
-import './ComplaintPage.css'
+import '../styles/ComplaintPage.css'
 
 export default function ComplaintPage() {
   const { orderId } = useParams()

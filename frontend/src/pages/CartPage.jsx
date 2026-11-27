@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { formatMoney, formatQuantity } from '../utils/format.js'
-import './CartPage.css'
+import '../styles/CartPage.css'
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal, clearCart } = useCart()
