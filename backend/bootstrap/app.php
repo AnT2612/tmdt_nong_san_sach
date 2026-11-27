@@ -15,7 +15,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -96,3 +96,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 500);
         });
     })->create();
+
+if (PHP_VERSION_ID >= 80600) {
+    $app->afterBootstrapping(\Illuminate\Foundation\Bootstrap\HandleExceptions::class, function () {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+    });
+}
+
+return $app;

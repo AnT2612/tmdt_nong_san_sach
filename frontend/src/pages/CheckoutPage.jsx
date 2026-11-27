@@ -5,7 +5,7 @@ import Icon from '../components/Icon.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { formatMoney, formatQuantity } from '../utils/format.js'
-import './CheckoutPage.css'
+import '../styles/CheckoutPage.css'
 
 const POINT_VALUE = 1000
 

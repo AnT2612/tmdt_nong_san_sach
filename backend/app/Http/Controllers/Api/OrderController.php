@@ -67,7 +67,7 @@ class OrderController extends Controller
         $order = $this->orderService->placeOrder($validated, $customer);
 
         $response = [
-            'order' => $order->load(['orderDetails.product', 'payments']),
+            'order' => $order->load(['orderDetails.product', 'orderDetails.batch', 'payments']),
         ];
 
         if (($validated['cong_thanh_toan'] ?? 'cod') === 'vnpay') {

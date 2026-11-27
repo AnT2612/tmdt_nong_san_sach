@@ -1,14 +1,5 @@
 <?php
 
-/**
- * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
- * CHỨC NĂNG: Trait trả về JSON thống nhất cho toàn bộ API.
- *
- *   Mọi endpoint đều trả cùng một cấu trúc, Frontend chỉ cần đọc 3 khoá:
- *       { success: bool, message: string, data: mixed }
- *
- *   Nhờ vậy phía React chỉ cần một chỗ xử lý lỗi là dùng được cho tất cả API.
- */
 
 namespace App\Http\Controllers\Concerns;
 
@@ -34,6 +25,7 @@ trait ApiResponse
     protected function error(string $message, int $statusCode = 400, mixed $errors = null): JsonResponse
     {
         return response()->json([
+            'status'  => 'error',
             'success' => false,
             'message' => $message,
             'errors'  => $errors,
