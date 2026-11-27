@@ -18,6 +18,7 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Sản phẩm
+// Sản phẩm & danh mục
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{slugOrId}', [ProductController::class, 'show']);
 Route::get('/categories', [ProductController::class, 'categories']);

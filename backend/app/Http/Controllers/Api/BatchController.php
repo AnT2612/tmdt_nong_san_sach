@@ -15,15 +15,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
+
 class BatchController extends Controller
 {
     use ApiResponse;
-
     public function __construct(
         private readonly InventoryService $inventoryService,
         private readonly TraceabilityService $traceabilityService,
     ) {
     }
+
 
     // Danh sách lô hàng
     public function index(Request $request): JsonResponse
@@ -40,6 +41,7 @@ class BatchController extends Controller
             ->paginate(max(1, (int) $request->input('per_page', 15)));
 
         // Bổ sung số ngày còn lại đến hạn để Frontend tô màu cảnh báo.
+
         $batches->getCollection()->transform(function (Batch $batch) {
             $batch->days_until_expiry = $batch->daysUntilExpiry();
             return $batch;
@@ -56,6 +58,7 @@ class BatchController extends Controller
             'planted_date' => ['required', 'date', 'before_or_equal:today'],
             'quality_note' => ['nullable', 'string', 'max:255'],
         ], [
+
             'product_id.required'   => 'Vui lòng chọn sản phẩm cho lô hàng.',
             'planted_date.required' => 'Vui lòng nhập ngày gieo trồng.',
             'planted_date.before_or_equal' => 'Ngày gieo trồng không được ở tương lai.',
@@ -65,6 +68,19 @@ class BatchController extends Controller
             'product_id'         => $validated['product_id'],
             'batch_code'         => $this->generateBatchCode(),
             'traceability_token' => $this->traceabilityService->generateToken(),
+
+            'product_id.required'          => 'Vui lòng chọn sản phẩm cho lô hàng.',
+            'planted_date.required'        => 'Vui lòng nhập ngày gieo trồng.',
+            'planted_date.before_or_equal' => 'Ngày gieo trồng không được ở tương lai.',
+        ]);
+
+        $token = Str::random(48);
+        $frontendUrl = rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/');
+
+        $batch = Batch::create([
+            'product_id'         => $validated['product_id'],
+            'batch_code'         => $this->generateBatchCode(),
+            'traceability_token' => $token,
             'farm_staff_id'      => Auth::guard('api')->id(),
             'planted_date'       => $validated['planted_date'],
             'quantity_imported'  => 0,
@@ -201,6 +217,13 @@ class BatchController extends Controller
             'transactions' => $transactions,
         ], 'Lấy thẻ kho thành công.');
     }
+
+
+            'batch'  => $batch->load('product'),
+            'qr_url' => $frontendUrl . '/truy-xuat/' . $token,
+        ], 'Tạo lô hàng thành công.', 201);
+    }
+
 
     // Sinh mã lô dạng LO-20261115-001
     private function generateBatchCode(): string
