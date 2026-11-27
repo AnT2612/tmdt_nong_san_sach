@@ -2,49 +2,50 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    use HasFactory;
+    public $timestamps = false;
 
-    public const STATUS_PENDING  = 'pending';
-    public const STATUS_SUCCESS  = 'success';
-    public const STATUS_FAILED   = 'failed';
-    public const STATUS_REFUNDED = 'refunded';
+    public const CONG_COD    = 'cod';
+    public const CONG_MOMO   = 'momo';
+    public const CONG_VNPAY  = 'vnpay';
+    public const CONG_VIETQR = 'vietqr';
+
+    public const STATUS_CHO        = 'cho';
+    public const STATUS_THANH_CONG = 'thanh_cong';
+    public const STATUS_THAT_BAI   = 'that_bai';
+    public const STATUS_HOAN_TIEN  = 'hoan_tien';
+
+    protected $table = 'payments';
 
     protected $fillable = [
         'order_id',
-        'customer_subscription_id',
-        'method',
-        'amount',
-        'vnp_txn_ref',
-        'vnp_transaction_no',
-        'vnp_response_code',
-        'bank_code',
-        'status',
-        'raw_response',
-        'paid_at',
+        'subscription_id',
+        'cong_thanh_toan',
+        'ma_giao_dich',
+        'so_tien',
+        'trang_thai',
+        'created_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'amount'       => 'decimal:0',
-            'raw_response' => 'array',
-            'paid_at'      => 'datetime',
+            'so_tien'    => 'decimal:0',
+            'created_at' => 'datetime',
         ];
     }
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class, 'order_id');
     }
 
     public function subscription(): BelongsTo
     {
-        return $this->belongsTo(CustomerSubscription::class, 'customer_subscription_id');
+        return $this->belongsTo(Subscription::class, 'subscription_id');
     }
 }

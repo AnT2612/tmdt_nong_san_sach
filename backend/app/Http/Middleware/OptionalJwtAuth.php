@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
+ * CHỨC NĂNG: Middleware "đăng nhập nếu có, không thì thôi".
+ *
+ *   Dùng cho API đặt hàng: khách VÃNG LAI (chưa có tài khoản) vẫn phải
+ *   đặt được hàng, nhưng nếu khách đã đăng nhập thì hệ thống cần biết
+ *   đó là ai để cộng điểm tích luỹ.
+ *
+ *   Cách làm:
+ *     - Có token hợp lệ  -> đăng nhập luôn, cho đi tiếp.
+ *     - Không có token   -> bỏ qua, coi như khách vãng lai.
+ *     - Token hỏng/hết hạn -> trả 401 để Frontend biết cần đăng nhập lại.
+ */
+
 namespace App\Http\Middleware;
 
 use Closure;

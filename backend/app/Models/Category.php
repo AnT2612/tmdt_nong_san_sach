@@ -2,33 +2,29 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    use HasFactory;
+    protected $table = 'categories';
 
     protected $fillable = [
-        'name',
+        'ten_danh_muc',
+        'mo_ta',
         'slug',
-        'description',
-        'image_url',
-        'sort_order',
-        'is_active',
+        'trang_thai',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active'  => 'boolean',
-            'sort_order' => 'integer',
+            'trang_thai' => 'boolean',
         ];
     }
 
     public function products(): HasMany
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(Product::class, 'category_id');
     }
 }

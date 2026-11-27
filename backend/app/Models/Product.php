@@ -2,79 +2,70 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use HasFactory;
+    protected $table = 'products';
 
     protected $fillable = [
         'category_id',
-        'name',
-        'slug',
         'sku',
-        'unit',
-        'price',
-        'sale_price',
-        'description',
-        'thumbnail_url',
-        'gallery',
-        'origin',
-        'certification_summary',
-        'shelf_life_days',
-        'is_active',
+        'ten_san_pham',
+        'slug',
+        'mo_ta',
+        'hinh_anh_dai_dien',
+        'gia_ban_co_ban',
+        'don_vi_tinh',
+        'chung_nhan',
+        'trang_thai',
     ];
 
     protected function casts(): array
     {
         return [
-            'gallery'         => 'array',
-            'price'           => 'decimal:0',
-            'sale_price'      => 'decimal:0',
-            'is_active'       => 'boolean',
-            'shelf_life_days' => 'integer',
+            'gia_ban_co_ban' => 'decimal:0',
+            'trang_thai'     => 'boolean',
         ];
     }
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function batches(): HasMany
     {
-        return $this->hasMany(Batch::class);
+        return $this->hasMany(Batch::class, 'product_id');
+    }
+
+    public function availableBatches(): HasMany
+    {
+        return $this->hasMany(Batch::class, 'product_id')
+            ->available()
+            ->fefoOrder();
     }
 
     public function reviews(): HasMany
     {
-        return $this->hasMany(Review::class);
+        return $this->hasMany(Review::class, 'product_id');
     }
 
-    // Giá khách phải trả. Có giá khuyến mãi thì dùng giá khuyến mãi.
-    public function currentPrice(): float
-    {
-        return (float) ($this->sale_price ?? $this->price);
-    }
-
-    // Danh sách lô còn bán được, xếp theo hạn sử dụng gần nhất trước
-    // Đây chính là thứ tự mà thuật toán FEFO sẽ lấy hàng
-    public function availableBatches()
-    {
-        return $this->batches()
-            ->where('status', Batch::STATUS_AVAILABLE)
-            ->where('quantity_available', '>', 0)
-            ->whereDate('expiry_date', '>=', now()->toDateString())
-            ->orderBy('expiry_date')
-            ->orderBy('id');
-    }
-
-    // Tổng số lượng còn bán được của sản phẩm (cộng tất cả các lô)
     public function totalAvailableQuantity(): float
     {
-        return (float) $this->availableBatches()->sum('quantity_available');
+        return round((float) $this->availableBatches()->sum('so_luong_ton'), 2);
+    }
+
+    public function currentPrice(): float
+    {
+        $nearest = $this->availableBatches()->first();
+
+        if ($nearest !== null && $nearest->gia_xa_hang !== null) {
+            return (float) $nearest->gia_xa_hang;
+        }
+
+        return (float) $this->gia_ban_co_ban;
     }
 }

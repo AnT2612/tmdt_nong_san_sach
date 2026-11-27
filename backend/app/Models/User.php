@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,37 +13,40 @@ class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
-    // Các vai trò hợp lệ, khai báo hằng số để tránh gõ sai chuỗi
-    public const ROLE_CUSTOMER        = 'customer';
-    public const ROLE_FARM_STAFF      = 'farm_staff';
-    public const ROLE_WAREHOUSE_STAFF = 'warehouse_staff';
-    public const ROLE_SALES           = 'sales';
-    public const ROLE_ADMIN           = 'admin';
+    protected $table = 'users';
 
     protected $fillable = [
-        'full_name',
+        'role_id',
+        'ho_ten',
         'email',
-        'phone',
-        'password',
-        'role',
-        'status',
-        'avatar_url',
+        'so_dien_thoai',
+        'mat_khau',
+        'diem_tich_luy',
+        'trang_thai',
     ];
 
     protected $hidden = [
-        'password',
+        'mat_khau',
         'remember_token',
+    ];
+
+    protected $appends = [
+        'ten_vai_tro',
     ];
 
     protected function casts(): array
     {
         return [
-            'password'       => 'hashed',
-            'loyalty_points' => 'integer',
+            'mat_khau'      => 'hashed',
+            'diem_tich_luy' => 'integer',
+            'trang_thai'    => 'boolean',
         ];
     }
 
-    // Phần bắt buộc của gói JWT: cho biết dữ liệu nào được nhúng vào token
+    public function getAuthPassword(): string
+    {
+        return (string) $this->mat_khau;
+    }
 
     public function getJWTIdentifier(): mixed
     {
@@ -52,51 +56,42 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'role' => $this->role,
+            'role' => $this->ten_vai_tro,
         ];
     }
 
-    // Hàm kiểm tra vai trò - dùng trong Controller và Service
-
-    public function isAdmin(): bool
+    public function role(): BelongsTo
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
-    public function isCustomer(): bool
+    public function getTenVaiTroAttribute(): ?string
     {
-        return $this->role === self::ROLE_CUSTOMER;
+        return $this->role?->ten_vai_tro;
     }
 
-    public function isSales(): bool
+    public function hasRole(string ...$roles): bool
     {
-        return $this->role === self::ROLE_SALES;
+        return in_array($this->ten_vai_tro, $roles, true);
     }
-
-    // Quan hệ
 
     public function addresses(): HasMany
     {
-        return $this->hasMany(Address::class);
+        return $this->hasMany(Address::class, 'user_id');
     }
 
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(Order::class, 'user_id');
     }
 
     public function subscriptions(): HasMany
     {
-        return $this->hasMany(CustomerSubscription::class);
+        return $this->hasMany(Subscription::class, 'user_id');
     }
 
-    public function complaints(): HasMany
+    public function pointTransactions(): HasMany
     {
-        return $this->hasMany(Complaint::class);
-    }
-
-    public function loyaltyTransactions(): HasMany
-    {
-        return $this->hasMany(LoyaltyTransaction::class);
+        return $this->hasMany(PointTransaction::class, 'user_id');
     }
 }

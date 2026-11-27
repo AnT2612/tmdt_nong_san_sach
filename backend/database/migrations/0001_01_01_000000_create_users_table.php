@@ -8,32 +8,26 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('ten_vai_tro', 50)->unique();
+            $table->string('mo_ta', 255)->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-
-            $table->string('full_name', 100);
+            $table->foreignId('role_id')->constrained('roles')->restrictOnDelete();
+            $table->string('ho_ten', 100);
             $table->string('email', 150)->unique();
-            $table->string('phone', 20)->nullable();
-            $table->string('password');
-
-            // 5 vai trò đúng theo tài liệu phân tích hệ thống
-            $table->enum('role', [
-                'customer',        // Khách hàng
-                'farm_staff',      // Nhân viên nông trại
-                'warehouse_staff', // Nhân viên kho
-                'sales',           // Nhân viên bán hàng / CSKH
-                'admin',           // Quản trị viên
-            ])->default('customer');
-
-            // Điểm tích luỹ hiện tại (bảng loyalty_transactions là sổ chi tiết)
-            $table->unsignedInteger('loyalty_points')->default(0);
-            $table->enum('status', ['active', 'locked'])->default('active');
-            $table->string('avatar_url', 500)->nullable();
-
+            $table->string('so_dien_thoai', 15)->nullable()->unique();
+            $table->string('mat_khau', 255);
+            $table->unsignedInteger('diem_tich_luy')->default(0);
+            $table->boolean('trang_thai')->default(true);
             $table->rememberToken();
             $table->timestamps();
 
-            $table->index('role');
+            $table->index('role_id', 'idx_users_role_id');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -57,5 +51,6 @@ return new class extends Migration
         Schema::dropIfExists('sessions');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('users');
+        Schema::dropIfExists('roles');
     }
 };

@@ -1,5 +1,9 @@
-
 <?php
+
+/**
+ * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
+ * CHỨC NĂNG: Cấu hình cổng thanh toán VNPay Sandbox.
+ */
 
 return [
     'tmn_code'    => env('VNPAY_TMN_CODE'),

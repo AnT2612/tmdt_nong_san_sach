@@ -2,71 +2,71 @@
 
 namespace Database\Seeders;
 
+use App\Models\DeliverySchedule;
+use App\Models\Payment;
 use App\Models\Product;
-use App\Models\SubscriptionPlan;
-use App\Models\SubscriptionPlanItem;
+use App\Models\Subscription;
+use App\Models\SubscriptionItem;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class SubscriptionPlanSeeder extends Seeder
 {
     public function run(): void
     {
-        // Gói 1: Rau gia đình, giao Thứ 3 và Thứ 6 hằng tuần.
-        $familyPlan = SubscriptionPlan::updateOrCreate(
-            ['slug' => 'goi-rau-gia-dinh'],
-            [
-                'name'              => 'Gói Rau Gia Đình',
-                'description'       => 'Gói rau củ tươi cho gia đình 3-4 người, giao Thứ 3 và Thứ 6 hằng tuần trong 1 tháng.',
-                'price'             => 450000,
-                'duration_days'     => 30,
-                'delivery_weekdays' => [3, 6],
-                'is_active'         => true,
-            ],
-        );
+        $customer = User::where('email', 'khachhang@nongsan.vn')->first();
 
-        // Gói 2: Gói văn phòng, giao mỗi Thứ 2.
-        $officePlan = SubscriptionPlan::updateOrCreate(
-            ['slug' => 'goi-rau-van-phong'],
-            [
-                'name'              => 'Gói Rau Văn Phòng',
-                'description'       => 'Gói rau sạch nhỏ gọn, giao mỗi Thứ 2 hằng tuần, phù hợp người độc thân.',
-                'price'             => 280000,
-                'duration_days'     => 30,
-                'delivery_weekdays' => [2],
-                'is_active'         => true,
-            ],
-        );
-
-        $this->attachItems($familyPlan, [
-            'RAU-MUONG'  => 2,
-            'CA-CHUA-BI' => 1,
-            'CAI-NGOT'   => 1,
-        ]);
-
-        $this->attachItems($officePlan, [
-            'RAU-MUONG' => 1,
-            'HANH-LA'   => 1,
-            'DUA-LEO'   => 0.5,
-        ]);
-    }
-
-    // Gắn danh sách sản phẩm vào một gói
-    private function attachItems(SubscriptionPlan $plan, array $itemsBySku): void
-    {
-        foreach ($itemsBySku as $sku => $quantity) {
-            $product = Product::where('sku', $sku)->first();
-
-            if ($product === null) {
-                continue;
-            }
-
-            SubscriptionPlanItem::updateOrCreate(
-                [
-                    'subscription_plan_id' => $plan->id,
-                    'product_id'           => $product->id,
-                ],
-                ['quantity' => $quantity],
-            );
+        if ($customer === null || Subscription::where('user_id', $customer->id)->exists()) {
+            return;
         }
+
+        $plan = config('subscriptions.plans.0');
+        $start = now()->startOfDay();
+        $end = $start->copy()->addDays((int) ($plan['thoi_han_ngay'] ?? 30));
+
+        $subscription = Subscription::create([
+            'user_id'              => $customer->id,
+            'ten_goi'              => $plan['ten_goi'],
+            'ngay_giao_trong_tuan' => $plan['ngay_giao_trong_tuan'],
+            'ngay_bat_dau'         => $start->toDateString(),
+            'ngay_ket_thuc'        => $end->toDateString(),
+            'dia_chi_giao'         => '65 Huỳnh Thúc Kháng, Quận 1, TP. HCM',
+            'trang_thai'           => Subscription::STATUS_ACTIVE,
+        ]);
+
+        foreach ($plan['items'] as $line) {
+            $product = Product::where('sku', $line['sku'])->first();
+            if ($product !== null) {
+                SubscriptionItem::create([
+                    'subscription_id' => $subscription->id,
+                    'product_id'      => $product->id,
+                    'so_luong'        => $line['so_luong'],
+                ]);
+            }
+        }
+
+        $weekdays = $subscription->weekdayArray();
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $isoWeekday = $cursor->dayOfWeekIso === 7 ? 7 : $cursor->dayOfWeekIso + 1;
+            if (in_array($isoWeekday, $weekdays, true)) {
+                DeliverySchedule::create([
+                    'subscription_id' => $subscription->id,
+                    'ngay_giao'       => $cursor->toDateString(),
+                    'khung_gio'       => '08:00-10:00',
+                    'trang_thai'      => DeliverySchedule::STATUS_CHO_SINH_DON,
+                ]);
+            }
+            $cursor->addDay();
+        }
+
+        Payment::create([
+            'subscription_id' => $subscription->id,
+            'cong_thanh_toan' => Payment::CONG_VNPAY,
+            'ma_giao_dich'    => 'SUB-' . $subscription->id . '-' . time(),
+            'so_tien'         => $plan['gia_goi'],
+            'trang_thai'      => Payment::STATUS_THANH_CONG,
+            'created_at'      => now(),
+        ]);
     }
 }
