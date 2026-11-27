@@ -4,7 +4,7 @@ import { apiGet, apiPost, readError, readFieldErrors } from '../api/client.js'
 import Icon from '../components/Icon.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatMoney, formatQuantity } from '../utils/format.js'
-import './SubscriptionPage.css'
+import '../styles/SubscriptionPage.css'
 
 const WEEKDAYS = [
   { value: 2, short: 'T2', full: 'Thứ 2' },

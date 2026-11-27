@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost, readError } from '../api/client.js'
 import Icon from '../components/Icon.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import {
   ORDER_STATUS_LABEL,
   PAYMENT_STATUS_LABEL,
@@ -9,7 +10,19 @@ import {
   formatMoney,
   formatQuantity,
 } from '../utils/format.js'
-import './OrdersPage.css'
+import '../styles/OrdersPage.css'
+
+const RECENT_ORDERS_KEY = 'nongsan_recent_orders'
+
+function readRecentOrders() {
+  try {
+    const raw = localStorage.getItem(RECENT_ORDERS_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 function statusTone(status) {
   if (status === 'hoan_thanh') return 'good'
@@ -19,16 +32,26 @@ function statusTone(status) {
 }
 
 export function OrderListPage() {
+  const { user, loading: authLoading } = useAuth()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (authLoading) return
+
+    if (!user) {
+      setOrders(readRecentOrders())
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
     apiGet('/orders?per_page=20')
       .then((response) => setOrders(response.data))
       .catch(() => setError('Không tải được danh sách đơn hàng.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user, authLoading])
 
   if (loading) {
     return (
@@ -59,6 +82,12 @@ export function OrderListPage() {
         <p className="data orders__count">{orders.length} đơn</p>
       </div>
 
+      {!user && (
+        <p className="order-note" style={{ marginBottom: 'var(--s4)' }}>
+          Đang hiển thị các đơn vừa đặt trên trình duyệt này. <Link to="/dang-nhap">Đăng nhập</Link> để xem toàn bộ đơn hàng của tài khoản.
+        </p>
+      )}
+
       {orders.length === 0 ? (
         <div className="empty">
           <p className="empty__title">Bạn chưa có đơn hàng nào</p>
@@ -88,6 +117,7 @@ export function OrderListPage() {
 
 export function OrderDetailPage() {
   const { id } = useParams()
+  const { hasRole } = useAuth()
   const [searchParams] = useSearchParams()
   const paymentStatus = searchParams.get('payment')
   const vnpCode = searchParams.get('vnp_code')
@@ -100,6 +130,7 @@ export function OrderDetailPage() {
   const [confirmingFefo, setConfirmingFefo] = useState(false)
   const [demoSuccessMsg, setDemoSuccessMsg] = useState('')
   const [payingVNPay, setPayingVNPay] = useState(false)
+  const [checkingPayment, setCheckingPayment] = useState(false)
   const [payError, setPayError] = useState('')
 
   useEffect(() => {
@@ -109,14 +140,57 @@ export function OrderDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
+  useEffect(() => {
+    const latest = order?.payments?.[0]
+    const paid = latest?.trang_thai === 'thanh_cong'
+    if (!order || paid || latest?.cong_thanh_toan !== 'vietqr' || order.trang_thai === 'da_huy') {
+      return
+    }
+
+    const timer = setInterval(() => {
+      apiGet(`/orders/${id}`)
+        .then((response) => {
+          const updated = response.data
+          setOrder(updated)
+          if (updated?.payments?.[0]?.trang_thai === 'thanh_cong') {
+            setDemoSuccessMsg('Đã nhận chuyển khoản VietQR thành công và xác nhận đơn hàng!')
+          }
+        })
+        .catch(() => {})
+    }, 3000)
+
+    return () => clearInterval(timer)
+  }, [id, order])
+
   async function handleConfirmPaid() {
     if (!order) return
+    setPayError('')
     try {
       const res = await apiPost('/payments/confirm', { order_id: order.id })
       setOrder(res.data?.order || res.data)
       setDemoSuccessMsg('Đã xác nhận thanh toán và tự động phân bổ lô hàng theo FEFO!')
     } catch (caught) {
-      alert(readError(caught))
+      setPayError(readError(caught))
+    }
+  }
+
+  async function handleCheckVietQrPayment() {
+    if (!order) return
+    setCheckingPayment(true)
+    setPayError('')
+    try {
+      const res = await apiGet(`/orders/${order.id}`)
+      const updated = res.data
+      setOrder(updated)
+      if (updated?.payments?.[0]?.trang_thai === 'thanh_cong') {
+        setDemoSuccessMsg('Đã nhận chuyển khoản VietQR thành công và xác nhận đơn hàng!')
+      } else {
+        setPayError('Chưa ghi nhận giao dịch chuyển khoản từ ngân hàng. Vui lòng hoàn tất chuyển khoản theo mã QR hoặc chờ vài giây.')
+      }
+    } catch (caught) {
+      setPayError(readError(caught))
+    } finally {
+      setCheckingPayment(false)
     }
   }
 
@@ -188,6 +262,13 @@ export function OrderDetailPage() {
         </div>
       )}
 
+      {demoSuccessMsg && (
+        <div className="order-alert order-alert--good">
+          <Icon name="check" size={20} />
+          <div><strong>{demoSuccessMsg}</strong></div>
+        </div>
+      )}
+
       {paymentStatus === 'failed' && (
         <div className="order-alert order-alert--danger">
           <Icon name="alert" size={20} />
@@ -243,7 +324,7 @@ export function OrderDetailPage() {
             <section className="order-block">
               <div className="order-block__header-row">
                 <h2 className="order-block__title">Truy xuất nguồn gốc từng lô (FEFO)</h2>
-                <span className="badge-fefo">✓ Đã phân bổ lô</span>
+                <span className="badge-fefo"><Icon name="check" size={14} /> Đã phân bổ lô</span>
               </div>
 
               <div className="alloc-cards">
@@ -282,7 +363,7 @@ export function OrderDetailPage() {
                 Đơn hàng đang chờ Sales duyệt để chạy thuật toán FEFO trừ kho.
               </p>
               {demoSuccessMsg && <p className="order-demo-alert">{demoSuccessMsg}</p>}
-              {order.trang_thai === 'cho_duyet' && (
+              {order.trang_thai === 'cho_duyet' && hasRole('sales', 'admin') && (
                 <div className="order-demo-actions">
                   <button
                     type="button"
@@ -290,7 +371,8 @@ export function OrderDetailPage() {
                     onClick={handleDemoConfirm}
                     disabled={confirmingFefo}
                   >
-                    {confirmingFefo ? 'Đang phân bổ…' : '⚡ Duyệt đơn & Gán lô FEFO (Demo)'}
+                    <Icon name="batch" size={15} />
+                    {confirmingFefo ? 'Đang phân bổ…' : 'Duyệt đơn & Gán lô FEFO'}
                   </button>
                 </div>
               )}
@@ -302,16 +384,60 @@ export function OrderDetailPage() {
           {!isPaid && order.trang_thai !== 'da_huy' && (
             <section className="order-block order-block--pay">
               <h2 className="order-block__title">Thanh toán ({latestPayment?.cong_thanh_toan?.toUpperCase()})</h2>
+              {latestPayment?.cong_thanh_toan === 'vietqr' && order.vietqr && (
+                <div className="vietqr-box">
+                  <img
+                    src={order.vietqr.qr_url}
+                    alt={`Mã VietQR ${order.ma_don}`}
+                    className="vietqr-box__img"
+                  />
+                  <div className="vietqr-box__meta">
+                    <p><strong>Ngân hàng:</strong> {order.vietqr.bank}</p>
+                    <p><strong>Số TK:</strong> <span className="data">{order.vietqr.account_no}</span></p>
+                    <p><strong>Chủ TK:</strong> {order.vietqr.account_name}</p>
+                    <p><strong>Số tiền:</strong> <span className="data">{formatMoney(order.vietqr.amount)}</span></p>
+                    <p><strong>Nội dung CK:</strong> <code className="data">{order.vietqr.memo}</code></p>
+                  </div>
+                  <p className="vietqr-box__status">
+                    Hệ thống tự động kiểm tra giao dịch mỗi 3 giây sau khi bạn chuyển khoản.
+                  </p>
+                </div>
+              )}
+
               {latestPayment?.cong_thanh_toan === 'vnpay' ? (
                 <button type="button" className="btn btn--primary btn--block" onClick={handlePayVNPay} disabled={payingVNPay}>
                   {payingVNPay ? 'Đang chuyển VNPay…' : 'Thanh toán qua VNPay →'}
                 </button>
+              ) : latestPayment?.cong_thanh_toan === 'vietqr' ? (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--block"
+                  onClick={handleCheckVietQrPayment}
+                  disabled={checkingPayment}
+                >
+                  <Icon name="clock" size={15} />
+                  {checkingPayment ? 'Đang kiểm tra giao dịch…' : 'Tôi đã chuyển khoản · Kiểm tra giao dịch'}
+                </button>
               ) : (
-                <button type="button" className="btn btn--primary btn--block" onClick={handleConfirmPaid}>
-                  ✓ Xác nhận đã thanh toán
+                <p className="order-block__note" style={{ marginBottom: 'var(--s3)' }}>
+                  {latestPayment?.cong_thanh_toan === 'momo'
+                    ? 'Đơn hàng đang chờ xác nhận thanh toán từ ví MoMo.'
+                    : 'Thanh toán tiền mặt khi nhận hàng (COD). Nhân viên sẽ xác nhận sau khi giao thành công.'}
+                </p>
+              )}
+
+              {hasRole('sales', 'admin') && latestPayment?.cong_thanh_toan !== 'vnpay' && (
+                <button
+                  type="button"
+                  className="btn btn--outline btn--block"
+                  style={{ marginTop: 'var(--s2)' }}
+                  onClick={handleConfirmPaid}
+                >
+                  <Icon name="check" size={15} />
+                  Xác nhận đã nhận tiền (Sales/Admin)
                 </button>
               )}
-              {payError && <p className="checkout__error">{payError}</p>}
+              {payError && <p className="checkout__error" style={{ marginTop: 'var(--s2)' }}>{payError}</p>}
             </section>
           )}
 
