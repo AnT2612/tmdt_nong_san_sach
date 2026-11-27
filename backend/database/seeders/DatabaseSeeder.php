@@ -10,9 +10,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UserSeeder::class,    // Phải chạy đầu tiên
-            ProductSeeder::class, // Danh mục + sản phẩm
-            UserSeeder::class, // Chạy đầu tiên ở PR #1
+            UserSeeder::class,             // Phải chạy đầu tiên
+            ProductSeeder::class,          // Danh mục + sản phẩm
+            SubscriptionPlanSeeder::class, // Gói định kỳ
         ]);
 
         $this->seedSystemSettings();
