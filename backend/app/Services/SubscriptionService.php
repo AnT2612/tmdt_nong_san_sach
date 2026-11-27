@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CustomerSubscription;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Carbon\Carbon;
@@ -13,12 +14,18 @@ use Illuminate\Validation\ValidationException;
 
 class SubscriptionService
 {
+    public function __construct(
+        private readonly OrderService $orderService,
+    ) {
+    }
+
     // Đăng ký gói định kỳ
     public function subscribe(User $customer, SubscriptionPlan $plan, array $data): CustomerSubscription
     {
         $startDate = Carbon::parse($data['start_date'] ?? now())->startOfDay();
         $endDate   = $startDate->copy()->addDays($plan->duration_days);
 
+        // Dùng lịch giao riêng của khách nếu có, không thì lấy của gói.
         $weekdays = $data['delivery_weekdays'] ?? $plan->delivery_weekdays;
 
         if (empty($weekdays)) {
@@ -53,10 +60,13 @@ class SubscriptionService
     // Tự sinh đơn cho các gói tới ngày giao
     public function generateDueOrders(): array
     {
+        // Chạy hai tiến trình cùng lúc (cron chồng nhau) sẽ tạo đơn trùng cho
+        // cùng một kỳ giao. Khoá lại để chỉ một tiến trình xử lý mỗi lần.
         return Cache::lock('subscription-generate-orders', 60)
             ->block(5, fn () => $this->createDueOrders());
     }
 
+    // Phần thân của generateDueOrders(), tách ra để bọc trong khoá
     private function createDueOrders(): array
     {
         $today = now()->startOfDay();
@@ -72,6 +82,8 @@ class SubscriptionService
         $createdOrders = [];
 
         foreach ($dueSubscriptions as $subscription) {
+            // Có sản phẩm nào trong gói không đủ hàng thì bỏ qua kỳ này.
+            // Sales sẽ nhận cảnh báo riêng để liên hệ khách đổi sản phẩm.
             if (! $this->hasEnoughStock($subscription)) {
                 $subscription->note = 'Kỳ giao ' . $today->format('d/m/Y')
                     . ' bị bỏ qua do thiếu hàng. Cần Sales liên hệ khách.';
@@ -82,6 +94,7 @@ class SubscriptionService
             $order = $this->createOrderForSubscription($subscription, $today);
             $createdOrders[] = $order;
 
+            // Dời ngày giao sang kỳ kế tiếp.
             $subscription->next_delivery_date = $this->findNextDeliveryDate(
                 $today->copy()->addDay(),
                 $subscription->delivery_weekdays,
@@ -93,7 +106,8 @@ class SubscriptionService
         return $createdOrders;
     }
 
-    // Bỏ một kỳ giao
+    // Bỏ một kỳ giao (luồng ngoại lệ: mất mùa / thiếu hàng)
+    // Chỉ dời ngày giao, không huỷ gói của khách
     public function skipDelivery(CustomerSubscription $subscription, User $sales): CustomerSubscription
     {
         $currentDate = $subscription->next_delivery_date ?? now();
@@ -112,6 +126,8 @@ class SubscriptionService
         return $subscription->fresh();
     }
 
+    // Tạo đơn hàng con từ một gói định kỳ
+    // Tận dụng lại OrderService để không lặp logic tính tiền
     private function createOrderForSubscription(CustomerSubscription $subscription, Carbon $deliveryDate): Order
     {
         $items = [];
@@ -123,9 +139,9 @@ class SubscriptionService
             ];
         }
 
-        $orderService = app(OrderService::class);
-
-        $order = $orderService->placeOrder([
+        // Đơn của gói định kỳ đã trả trước nên tổng tiền = 0,
+        // khách không bị tính thêm tiền hàng lần nữa.
+        $order = $this->orderService->placeOrder([
             'user_id'          => $subscription->user_id,
             'subscription_id'  => $subscription->id,
             'receiver_name'    => $subscription->receiver_name,
@@ -136,15 +152,17 @@ class SubscriptionService
             'items'            => $items,
         ], $subscription->user);
 
-        $order->subtotal       = 0;
-        $order->shipping_fee   = 0;
-        $order->total_amount   = 0;
-        $order->payment_status = $subscription->payment_status;
+        // Ghi rõ đơn này không thu tiền vì đã trả trước cả gói.
+        $order->subtotal        = 0;
+        $order->shipping_fee    = 0;
+        $order->total_amount    = 0;
+        $order->payment_status  = $subscription->payment_status;
         $order->save();
 
         return $order->fresh('items');
     }
 
+    // Kiểm tra gói có đủ tồn kho cho một kỳ giao hay không
     private function hasEnoughStock(CustomerSubscription $subscription): bool
     {
         foreach ($subscription->plan->items as $planItem) {
@@ -162,6 +180,12 @@ class SubscriptionService
         return true;
     }
 
+    // Tìm ngày giao kế tiếp
+    //
+    // Duyệt từng ngày kể từ $from, ngày nào rơi vào một trong các thứ
+    // trong $weekdays thì chọn. Giới hạn 14 ngày để tránh vòng lặp vô hạn.
+    //
+    // Carbon dayOfWeek: 1 = Thứ 2, ..., 7 = Chủ nhật.
     public function findNextDeliveryDate(Carbon $from, array $weekdays, Carbon $endDate): ?Carbon
     {
         $weekdays = array_map('intval', $weekdays);
@@ -169,7 +193,7 @@ class SubscriptionService
 
         for ($i = 0; $i < 14; $i++) {
             if ($cursor->gt($endDate)) {
-                return null;
+                return null; // Gói đã hết kỳ.
             }
 
             if (in_array($cursor->dayOfWeek, $weekdays, true)) {
