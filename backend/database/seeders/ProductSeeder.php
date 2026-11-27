@@ -12,83 +12,75 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Rau ăn lá', 'slug' => 'rau-an-la', 'description' => 'Cải, muống, mồng tơi...', 'sort_order' => 1],
-            ['name' => 'Củ quả',    'slug' => 'cu-qua',    'description' => 'Cà rốt, khoai tây, cà chua...', 'sort_order' => 2],
-            ['name' => 'Trái cây',  'slug' => 'trai-cay',  'description' => 'Trái cây theo mùa', 'sort_order' => 3],
-            ['name' => 'Gia vị',    'slug' => 'gia-vi',    'description' => 'Hành, tỏi, ớt, sả...', 'sort_order' => 4],
+            ['ten_danh_muc' => 'Rau ăn lá', 'slug' => 'rau-an-la', 'mo_ta' => 'Cải, muống, mồng tơi...'],
+            ['ten_danh_muc' => 'Củ quả',    'slug' => 'cu-qua',    'mo_ta' => 'Cà rốt, khoai tây, cà chua...'],
+            ['ten_danh_muc' => 'Trái cây',  'slug' => 'trai-cay',  'mo_ta' => 'Trái cây theo mùa'],
+            ['ten_danh_muc' => 'Gia vị',    'slug' => 'gia-vi',    'mo_ta' => 'Hành, tỏi, ớt, sả...'],
         ];
 
         foreach ($categories as $category) {
-            Category::updateOrCreate(['slug' => $category['slug']], $category);
+            Category::updateOrCreate(
+                ['slug' => $category['slug']],
+                array_merge($category, ['trang_thai' => true])
+            );
         }
 
         $categoryIds = Category::pluck('id', 'slug');
 
         $products = [
             [
-                'category_id' => $categoryIds['rau-an-la'],
-                'name'        => 'Rau muống hữu cơ',
-                'sku'         => 'RAU-MUONG',
-                'unit'        => 'bó',
-                'price'       => 12000,
-                'origin'      => 'Nông trại Củ Chi',
-                'shelf_life_days' => 3,
-                'certification_summary' => 'VietGAP',
-                'description' => 'Rau muống trồng theo chuẩn VietGAP, không thuốc trừ sâu hóa học.',
+                'category_id'    => $categoryIds['rau-an-la'],
+                'ten_san_pham'   => 'Rau muống hữu cơ',
+                'sku'            => 'RAU-MUONG',
+                'don_vi_tinh'    => 'bó',
+                'gia_ban_co_ban' => 12000,
+                'chung_nhan'     => 'VietGAP',
+                'mo_ta'          => 'Rau muống trồng tại Nông trại Củ Chi theo chuẩn VietGAP, không thuốc trừ sâu hóa học.',
             ],
             [
-                'category_id' => $categoryIds['rau-an-la'],
-                'name'        => 'Cải ngọt',
-                'sku'         => 'CAI-NGOT',
-                'unit'        => 'kg',
-                'price'       => 25000,
-                'origin'      => 'Nông trại Củ Chi',
-                'shelf_life_days' => 4,
-                'certification_summary' => 'VietGAP',
-                'description' => 'Cải ngọt non, thu hoạch trong ngày.',
+                'category_id'    => $categoryIds['rau-an-la'],
+                'ten_san_pham'   => 'Cải ngọt',
+                'sku'            => 'CAI-NGOT',
+                'don_vi_tinh'    => 'kg',
+                'gia_ban_co_ban' => 25000,
+                'chung_nhan'     => 'VietGAP',
+                'mo_ta'          => 'Cải ngọt non thu hoạch trong ngày tại Nông trại Củ Chi.',
             ],
             [
-                'category_id' => $categoryIds['cu-qua'],
-                'name'        => 'Cà chua bi',
-                'sku'         => 'CA-CHUA-BI',
-                'unit'        => 'kg',
-                'price'       => 45000,
-                'sale_price'  => 39000,
-                'origin'      => 'Nông trại Củ Chi',
-                'shelf_life_days' => 7,
-                'certification_summary' => 'VietGAP',
-                'description' => 'Cà chua bi ngọt, trồng trong nhà lưới.',
+                'category_id'    => $categoryIds['cu-qua'],
+                'ten_san_pham'   => 'Cà chua bi',
+                'sku'            => 'CA-CHUA-BI',
+                'don_vi_tinh'    => 'kg',
+                'gia_ban_co_ban' => 45000,
+                'chung_nhan'     => 'VietGAP',
+                'mo_ta'          => 'Cà chua bi hữu cơ trồng trong nhà lưới, vị ngọt thanh tự nhiên.',
             ],
             [
-                'category_id' => $categoryIds['cu-qua'],
-                'name'        => 'Cà rốt Đà Lạt',
-                'sku'         => 'CA-ROT',
-                'unit'        => 'kg',
-                'price'       => 32000,
-                'origin'      => 'Đà Lạt',
-                'shelf_life_days' => 14,
-                'certification_summary' => 'VietGAP',
-                'description' => 'Cà rốt tươi, bảo quản lạnh.',
+                'category_id'    => $categoryIds['cu-qua'],
+                'ten_san_pham'   => 'Cà rốt Đà Lạt',
+                'sku'            => 'CA-ROT',
+                'don_vi_tinh'    => 'kg',
+                'gia_ban_co_ban' => 32000,
+                'chung_nhan'     => 'VietGAP',
+                'mo_ta'          => 'Cà rốt tươi thu hoạch đạt chuẩn, bảo quản kho mát.',
             ],
             [
-                'category_id' => $categoryIds['trai-cay'],
-                'name'        => 'Dưa leo baby',
-                'sku'         => 'DUA-LEO',
-                'unit'        => 'kg',
-                'price'       => 28000,
-                'origin'      => 'Nông trại Củ Chi',
-                'shelf_life_days' => 5,
-                'description' => 'Dưa leo giòn, ăn sống được.',
+                'category_id'    => $categoryIds['trai-cay'],
+                'ten_san_pham'   => 'Dưa leo baby',
+                'sku'            => 'DUA-LEO',
+                'don_vi_tinh'    => 'kg',
+                'gia_ban_co_ban' => 28000,
+                'chung_nhan'     => 'USDA Organic',
+                'mo_ta'          => 'Dưa leo giòn ngọt, có thể ăn sống trực tiếp.',
             ],
             [
-                'category_id' => $categoryIds['gia-vi'],
-                'name'        => 'Hành lá',
-                'sku'         => 'HANH-LA',
-                'unit'        => 'bó',
-                'price'       => 8000,
-                'origin'      => 'Nông trại Củ Chi',
-                'shelf_life_days' => 3,
-                'description' => 'Hành lá tươi thơm.',
+                'category_id'    => $categoryIds['gia-vi'],
+                'ten_san_pham'   => 'Hành lá',
+                'sku'            => 'HANH-LA',
+                'don_vi_tinh'    => 'bó',
+                'gia_ban_co_ban' => 8000,
+                'chung_nhan'     => 'VietGAP',
+                'mo_ta'          => 'Hành lá tươi thơm thu hoạch sáng sớm.',
             ],
         ];
 
@@ -96,9 +88,9 @@ class ProductSeeder extends Seeder
             Product::updateOrCreate(
                 ['sku' => $product['sku']],
                 array_merge($product, [
-                    'slug'      => Str::slug($product['name']),
-                    'is_active' => true,
-                ]),
+                    'slug'       => Str::slug($product['ten_san_pham']),
+                    'trang_thai' => true,
+                ])
             );
         }
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,17 +14,21 @@ class UserController extends Controller
 {
     use ApiResponse;
 
-    // Danh sách người dùng
     public function index(Request $request): JsonResponse
     {
         $users = User::query()
-            ->when($request->filled('role'), fn ($query) => $query->where('role', $request->input('role')))
+            ->with('role')
+            ->when($request->filled('role'), function ($query) use ($request) {
+                $role = $request->input('role');
+                $query->whereHas('role', fn ($q) => $q->where('ten_vai_tro', $role));
+            })
             ->when($request->filled('search'), function ($query) use ($request) {
                 $keyword = $request->string('search')->toString();
 
                 $query->where(function ($subQuery) use ($keyword) {
-                    $subQuery->where('full_name', 'like', "%{$keyword}%")
-                        ->orWhere('email', 'like', "%{$keyword}%");
+                    $subQuery->where('ho_ten', 'like', "%{$keyword}%")
+                        ->orWhere('email', 'like', "%{$keyword}%")
+                        ->orWhere('so_dien_thoai', 'like', "%{$keyword}%");
                 });
             })
             ->latest()
@@ -32,18 +37,16 @@ class UserController extends Controller
         return $this->paginated($users, 'Lấy danh sách người dùng thành công.');
     }
 
-    // Đổi vai trò
     public function updateRole(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:customer,farm_staff,warehouse_staff,sales,admin'],
+            'ten_vai_tro' => ['required', 'in:customer,farm_staff,sales,admin'],
         ], [
-            'role.required' => 'Vui lòng chọn vai trò mới.',
-            'role.in'       => 'Vai trò không hợp lệ.',
+            'ten_vai_tro.required' => 'Vui lòng chọn vai trò mới.',
+            'ten_vai_tro.in'       => 'Vai trò không hợp lệ.',
         ]);
 
         $user = User::find($id);
-
         if ($user === null) {
             return $this->error('Không tìm thấy người dùng.', 404);
         }
@@ -52,17 +55,16 @@ class UserController extends Controller
             return $this->error('Bạn không thể tự đổi vai trò của chính mình.', 422);
         }
 
-        $user->role = $validated['role'];
+        $role = Role::where('ten_vai_tro', $validated['ten_vai_tro'])->firstOrFail();
+        $user->role_id = $role->id;
         $user->save();
 
-        return $this->success($user, 'Đã cập nhật vai trò người dùng.');
+        return $this->success($user->fresh('role'), 'Đã cập nhật vai trò người dùng.');
     }
 
-    // KHOÁ / MỞ KHOÁ TÀI KHOẢN
     public function toggleStatus(int $id): JsonResponse
     {
         $user = User::find($id);
-
         if ($user === null) {
             return $this->error('Không tìm thấy người dùng.', 404);
         }
@@ -71,9 +73,9 @@ class UserController extends Controller
             return $this->error('Bạn không thể tự khoá tài khoản của chính mình.', 422);
         }
 
-        $user->status = $user->status === 'active' ? 'locked' : 'active';
+        $user->trang_thai = ! $user->trang_thai;
         $user->save();
 
-        return $this->success($user, 'Đã cập nhật trạng thái tài khoản.');
+        return $this->success($user->fresh('role'), 'Đã cập nhật trạng thái tài khoản.');
     }
 }

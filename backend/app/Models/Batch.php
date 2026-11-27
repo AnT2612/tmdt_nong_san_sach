@@ -3,92 +3,111 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Batch extends Model
 {
-    use HasFactory;
+    public const STATUS_CON_HANG = 'con_hang';
+    public const STATUS_CAN_HAN  = 'can_han';
+    public const STATUS_HET_HANG = 'het_hang';
+    public const STATUS_HET_HAN  = 'het_han';
 
-    public const STATUS_GROWING   = 'growing';
-    public const STATUS_AVAILABLE = 'available';
-    public const STATUS_DEPLETED  = 'depleted';
-    public const STATUS_EXPIRED   = 'expired';
-    public const STATUS_DISPOSED  = 'disposed';
+    protected $table = 'batches';
 
     protected $fillable = [
         'product_id',
-        'batch_code',
-        'traceability_token',
-        'farm_staff_id',
-        'planted_date',
-        'harvest_date',
-        'expiry_date',
-        'quantity_imported',
-        'quantity_available',
-        'status',
-        'quality_note',
+        'ma_lo',
+        'ngay_thu_hoach',
+        'ngay_het_han',
+        'so_luong_nhap',
+        'so_luong_ton',
+        'so_luong_hao_hut',
+        'qr_code',
+        'trang_thai',
+        'gia_xa_hang',
+        'created_by',
     ];
 
     protected function casts(): array
     {
         return [
-            'planted_date'       => 'date',
-            'harvest_date'       => 'date',
-            'expiry_date'        => 'date',
-            'quantity_imported'  => 'decimal:3',
-            'quantity_available' => 'decimal:3',
+            'ngay_thu_hoach'   => 'date',
+            'ngay_het_han'     => 'date',
+            'so_luong_nhap'    => 'decimal:2',
+            'so_luong_ton'     => 'decimal:2',
+            'so_luong_hao_hut' => 'decimal:2',
+            'gia_xa_hang'      => 'decimal:0',
         ];
     }
 
-    // Quan hệ
-
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
-    public function farmStaff(): BelongsTo
+    public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'farm_staff_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function farmingLogs(): HasMany
     {
-        return $this->hasMany(FarmingLog::class)->orderBy('activity_date');
+        return $this->hasMany(FarmingLog::class, 'batch_id')->orderBy('thoi_gian');
     }
 
-    public function inventoryTransactions(): HasMany
+    public function lossRecords(): HasMany
     {
-        return $this->hasMany(InventoryTransaction::class);
+        return $this->hasMany(LossRecord::class, 'batch_id')->latest('created_at');
     }
 
-    // Scope (bộ lọc dùng lại) và hàm tiện ích
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(BatchAlert::class, 'batch_id')->latest('ngay_canh_bao');
+    }
 
-    // Lô đang bán được: đã thu hoạch, còn hàng, chưa quá hạn
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class, 'batch_id')->latest('ngay_cap');
+    }
+
+    public function orderDetails(): HasMany
+    {
+        return $this->hasMany(OrderDetail::class, 'batch_id');
+    }
+
     public function scopeAvailable(Builder $query): Builder
     {
         return $query
-            ->where('status', self::STATUS_AVAILABLE)
-            ->where('quantity_available', '>', 0)
-            ->whereDate('expiry_date', '>=', now()->toDateString());
+            ->whereIn('trang_thai', [self::STATUS_CON_HANG, self::STATUS_CAN_HAN])
+            ->where('so_luong_ton', '>', 0)
+            ->whereDate('ngay_het_han', '>=', now()->toDateString());
     }
 
-    // Sắp xếp FEFO: hạn sử dụng gần nhất lên đầu
     public function scopeFefoOrder(Builder $query): Builder
     {
-        return $query->orderBy('expiry_date')->orderBy('id');
+        return $query
+            ->orderBy('ngay_het_han', 'asc')
+            ->orderBy('ngay_thu_hoach', 'asc')
+            ->orderBy('id', 'asc');
     }
 
-    // Số ngày còn lại đến hạn sử dụng (âm nếu đã quá hạn)
-    public function daysUntilExpiry(): int
+    public function daysUntilExpiry(): ?int
     {
-        if ($this->expiry_date === null) {
-            return PHP_INT_MAX;
+        if ($this->ngay_het_han === null) {
+            return null;
         }
 
-        return (int) now()->startOfDay()->diffInDays($this->expiry_date->startOfDay(), false);
+        return (int) now()->startOfDay()->diffInDays($this->ngay_het_han->copy()->startOfDay(), false);
+    }
+
+    public function effectivePrice(): float
+    {
+        if ($this->gia_xa_hang !== null) {
+            return (float) $this->gia_xa_hang;
+        }
+
+        return (float) ($this->product?->gia_ban_co_ban ?? 0);
     }
 }

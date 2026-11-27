@@ -8,29 +8,33 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserHasRole
 {
-    // Danh sách vai trò được phép truy cập
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
         if ($user === null) {
             return response()->json([
+                'status'  => 'error',
                 'success' => false,
                 'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.',
             ], 401);
         }
 
-        if (! in_array($user->role, $roles, true)) {
+        $user->loadMissing('role');
+
+        if (! $user->hasRole(...$roles)) {
             return response()->json([
-                'success' => false,
-                'message' => 'Bạn không có quyền truy cập chức năng này.',
-                'your_role' => $user->role,
+                'status'         => 'error',
+                'success'        => false,
+                'message'        => 'Bạn không có quyền truy cập chức năng này.',
+                'your_role'      => $user->ten_vai_tro,
                 'required_roles' => $roles,
             ], 403);
         }
 
-        if ($user->status === 'locked') {
+        if (! $user->trang_thai) {
             return response()->json([
+                'status'  => 'error',
                 'success' => false,
                 'message' => 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
             ], 403);

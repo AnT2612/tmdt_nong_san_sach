@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
+ * CHỨC NĂNG: Cấu hình CORS (Cross-Origin Resource Sharing).
+ *
+ *   Cho phép ứng dụng React chạy ở cổng 5173 gọi API Laravel ở cổng 8000.
+ *   Không có file này, trình duyệt sẽ chặn mọi request từ Frontend.
+ */
+
 return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],

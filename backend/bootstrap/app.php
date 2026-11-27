@@ -1,13 +1,17 @@
 <?php
 
+use App\Exceptions\InsufficientStockException;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\OptionalJwtAuth;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
@@ -17,57 +21,78 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
-        apiPrefix: 'api',
+        apiPrefix: 'api/v1',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Cho phép Frontend React gọi API từ cổng khác (CORS).
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
 
-        // Đăng ký alias để dùng trong routes/api.php.
         $middleware->alias([
             'role'         => EnsureUserHasRole::class,
             'jwt.optional' => OptionalJwtAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Lỗi validate => trả JSON có cấu trúc thống nhất.
-        $exceptions->render(function (ValidationException $exception, Request $request) {
-            if (! $request->is('api/*')) {
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null;
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Dữ liệu không hợp lệ.',
-                'errors'  => $exception->errors(),
-            ], 422);
-        });
+            if ($e instanceof TokenMismatchException) {
+                return response()->json([
+                    'status'     => 'error',
+                    'success'    => false,
+                    'error_code' => 'CSRF_EXPIRED',
+                    'message'    => 'Phiên làm việc đã hết hạn.',
+                ], 419);
+            }
 
-        // Chưa đăng nhập hoặc token sai.
-        // Bắt cả AuthenticationException của Laravel lẫn UnauthorizedHttpException
-        // do gói JWT ném ra, để Frontend luôn nhận một cấu trúc JSON thống nhất.
-        $exceptions->render(function (AuthenticationException|UnauthorizedHttpException $exception, Request $request) {
-            if (! $request->is('api/*')) {
-                return null;
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => 'Dữ liệu đầu vào không hợp lệ.',
+                    'errors'  => $e->errors(),
+                ], 422);
+            }
+
+            if ($e instanceof InsufficientStockException) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            if ($e instanceof AuthenticationException || $e instanceof UnauthorizedHttpException) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.',
+                ], 401);
+            }
+
+            if ($e instanceof AccessDeniedHttpException) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => 'Bạn không có quyền thực hiện thao tác này.',
+                ], 403);
+            }
+
+            if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => 'Không tìm thấy tài nguyên yêu cầu.',
+                ], 404);
             }
 
             return response()->json([
+                'status'  => 'error',
                 'success' => false,
-                'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.',
-            ], 401);
-        });
-
-        // Đường dẫn API không tồn tại.
-        $exceptions->render(function (NotFoundHttpException $exception, Request $request) {
-            if (! $request->is('api/*')) {
-                return null;
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Không tìm thấy tài nguyên yêu cầu.',
-            ], 404);
+                'message' => config('app.debug') ? $e->getMessage() : 'Lỗi hệ thống máy chủ nội bộ.',
+            ], 500);
         });
     })->create();

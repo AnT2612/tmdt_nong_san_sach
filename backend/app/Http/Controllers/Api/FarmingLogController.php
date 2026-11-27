@@ -14,19 +14,17 @@ class FarmingLogController extends Controller
 {
     use ApiResponse;
 
-    // Danh sách nhật ký của một lô
     public function index(int $batchId): JsonResponse
     {
-        $batch = Batch::with('product:id,name')->find($batchId);
-
+        $batch = Batch::with('product:id,ten_san_pham')->find($batchId);
         if ($batch === null) {
             return $this->error('Không tìm thấy lô hàng.', 404);
         }
 
         $logs = FarmingLog::query()
-            ->with('author:id,full_name')
+            ->with('farmStaff:id,ho_ten')
             ->where('batch_id', $batchId)
-            ->orderBy('activity_date')
+            ->orderBy('thoi_gian')
             ->orderBy('id')
             ->get();
 
@@ -36,57 +34,45 @@ class FarmingLogController extends Controller
         ], 'Lấy nhật ký canh tác thành công.');
     }
 
-    // Thêm một mốc nhật ký
     public function store(Request $request, int $batchId): JsonResponse
     {
         $batch = Batch::find($batchId);
-
         if ($batch === null) {
             return $this->error('Không tìm thấy lô hàng.', 404);
         }
 
         $validated = $request->validate([
-            'activity_type' => ['required', 'in:planting,watering,fertilizing,spraying,inspection,harvesting'],
-            'activity_date' => ['required', 'date', 'before_or_equal:today'],
-            'title'         => ['required', 'string', 'max:150'],
-            'description'   => ['nullable', 'string', 'max:2000'],
-
-            // Danh sách URL ảnh/video đã upload lên Cloudinary.
-            'media'         => ['nullable', 'array', 'max:10'],
-            'media.*'       => ['url', 'max:500'],
+            'hanh_dong'           => ['required', 'string', 'max:100'],
+            'thoi_gian'           => ['required', 'date', 'before_or_equal:now'],
+            'mo_ta'               => ['nullable', 'string', 'max:2000'],
+            'hinh_anh_minh_chung' => ['nullable', 'url', 'max:255'],
         ], [
-            'activity_type.required' => 'Vui lòng chọn loại hoạt động.',
-            'activity_date.required' => 'Vui lòng nhập ngày thực hiện.',
-            'title.required'         => 'Vui lòng nhập tiêu đề hoạt động.',
-            'media.max'              => 'Mỗi mốc nhật ký chỉ được đính kèm tối đa 10 tệp.',
-            'media.*.url'            => 'Đường dẫn ảnh/video không hợp lệ.',
+            'hanh_dong.required'      => 'Vui lòng nhập loại hoạt động canh tác.',
+            'thoi_gian.required'      => 'Vui lòng nhập thời gian thực hiện.',
+            'hinh_anh_minh_chung.url' => 'Đường dẫn ảnh/video minh chứng không hợp lệ.',
         ]);
 
         $log = FarmingLog::create([
-            'batch_id'      => $batchId,
-            'created_by'    => Auth::guard('api')->id(),
-            'activity_type' => $validated['activity_type'],
-            'activity_date' => $validated['activity_date'],
-            'title'         => $validated['title'],
-            'description'   => $validated['description'] ?? null,
-            'media'         => $validated['media'] ?? [],
+            'batch_id'            => $batchId,
+            'farm_staff_id'       => Auth::guard('api')->id(),
+            'hanh_dong'           => $validated['hanh_dong'],
+            'mo_ta'               => $validated['mo_ta'] ?? null,
+            'hinh_anh_minh_chung' => $validated['hinh_anh_minh_chung'] ?? null,
+            'thoi_gian'           => $validated['thoi_gian'],
         ]);
 
-        return $this->success($log->load('author:id,full_name'), 'Đã thêm nhật ký canh tác.', 201);
+        return $this->success($log->load('farmStaff:id,ho_ten'), 'Đã thêm nhật ký canh tác.', 201);
     }
 
-    // Xoá một mốc nhật ký ghi nhầm
-    // Chỉ cho phép trong 24 giờ đầu để dữ liệu truy xuất không bị sửa về sau
     public function destroy(int $batchId, int $logId): JsonResponse
     {
         $log = FarmingLog::where('batch_id', $batchId)->find($logId);
-
         if ($log === null) {
             return $this->error('Không tìm thấy nhật ký.', 404);
         }
 
-        if ($log->created_at->copy()->addHours(24)->isPast()) {
-            return $this->error('Chỉ có thể xoá nhật ký trong vòng 24 giờ sau khi tạo.', 422);
+        if ($log->created_at !== null && $log->created_at->copy()->addHours(24)->isPast()) {
+            return $this->error('Sau 24 giờ, nhật ký canh tác đã công bố không được phép xóa.', 422);
         }
 
         $log->delete();

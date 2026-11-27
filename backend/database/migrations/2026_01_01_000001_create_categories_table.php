@@ -10,12 +10,10 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100);
+            $table->string('ten_danh_muc', 100);
+            $table->text('mo_ta')->nullable();
             $table->string('slug', 120)->unique();
-            $table->string('description', 500)->nullable();
-            $table->string('image_url', 500)->nullable();
-            $table->unsignedSmallInteger('sort_order')->default(0);
-            $table->boolean('is_active')->default(true);
+            $table->boolean('trang_thai')->default(true);
             $table->timestamps();
         });
     }

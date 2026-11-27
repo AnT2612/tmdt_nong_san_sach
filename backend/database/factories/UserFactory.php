@@ -2,36 +2,31 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
+use App\Models\Role;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<User>
- */
 class UserFactory extends Factory
 {
-    // The current password being used by the factory
     protected static ?string $password;
 
-    // Define the model's default state
     public function definition(): array
     {
+        $role = Role::firstOrCreate(
+            ['ten_vai_tro' => Role::CUSTOMER],
+            ['mo_ta' => 'Khách hàng']
+        );
+
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'role_id'        => $role->id,
+            'ho_ten'         => fake()->name(),
+            'email'          => fake()->unique()->safeEmail(),
+            'so_dien_thoai'  => fake()->unique()->numerify('09########'),
+            'mat_khau'       => static::$password ??= Hash::make('12345678'),
+            'diem_tich_luy'  => 0,
+            'trang_thai'     => true,
             'remember_token' => Str::random(10),
         ];
-    }
-
-    // Indicate that the model's email address should be unverified
-    public function unverified(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
     }
 }

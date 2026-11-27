@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.zip
+DoAnMonHoc.zip
+README.md
+!/README.md
