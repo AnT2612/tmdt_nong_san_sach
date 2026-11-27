@@ -4,6 +4,7 @@ use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BatchController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\FarmingLogController;
@@ -62,6 +63,11 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
     Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
+
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/items', [CartController::class, 'store']);
+    Route::patch('/cart/items/{id}', [CartController::class, 'update']);
+    Route::delete('/cart/items/{id}', [CartController::class, 'destroy']);
 
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);

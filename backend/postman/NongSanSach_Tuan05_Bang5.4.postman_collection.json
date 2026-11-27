@@ -1,0 +1,1092 @@
+{
+    "info":  {
+                 "_postman_id":  "6e65db41-c246-45e2-aa41-150f90c05854",
+                 "name":  "Nong San Sach API v1 - Tuan 05 (Bang 5.4)",
+                 "description":  "Kich ban kiem thu API va nghiep vu Tuan 05 - Bang 5.4 (Nong San Sach)",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+                 "createdAt":  "2026-11-27T06:56:33.000Z",
+                 "updatedAt":  "2026-11-27T06:56:42.000Z",
+                 "lastUpdatedBy":  "60411309",
+                 "uid":  "60411309-6e65db41-c246-45e2-aa41-150f90c05854"
+             },
+    "item":  [
+                 {
+                     "name":  "00. Setup - Dang nhap \u0026 Chuan bi du lieu",
+                     "item":  [
+                                  {
+                                      "name":  "01. Login Customer (khachhang@nongsan.vn)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Login Customer thanh cong (200)\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Co JWT token Customer\u0027, function () { pm.expect(json.success).to.eql(true); pm.expect(json.data.token).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.environment.set(\u0027customer_token\u0027, json.data.token);",
+                                                                                    "pm.collectionVariables.set(\u0027customer_token\u0027, json.data.token);"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "ac0dfb8f-1ffa-4981-9b52-619332324cdb",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"khachhang@nongsan.vn\",\n  \"mat_khau\": \"12345678\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "Dang nhap tai khoan Customer de lay JWT token"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:02.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:02.000Z",
+                                      "uid":  "60411309-ac0dfb8f-1ffa-4981-9b52-619332324cdb"
+                                  },
+                                  {
+                                      "name":  "02. Login Farm Staff (nongtrai@nongsan.vn)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Login Farm Staff thanh cong (200)\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Co JWT token Farm Staff\u0027, function () { pm.expect(json.success).to.eql(true); pm.expect(json.data.token).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.environment.set(\u0027farm_staff_token\u0027, json.data.token);",
+                                                                                    "pm.collectionVariables.set(\u0027farm_staff_token\u0027, json.data.token);"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "3c1e9199-eb36-4b51-80f1-fed433c21ef7",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"nongtrai@nongsan.vn\",\n  \"mat_khau\": \"12345678\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "Dang nhap tai khoan Farm Staff de lay JWT token"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:04.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:04.000Z",
+                                      "uid":  "60411309-3c1e9199-eb36-4b51-80f1-fed433c21ef7"
+                                  },
+                                  {
+                                      "name":  "03. Login Sales (sales@nongsan.vn)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Login Sales thanh cong (200)\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Co JWT token Sales\u0027, function () { pm.expect(json.success).to.eql(true); pm.expect(json.data.token).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.environment.set(\u0027sales_token\u0027, json.data.token);",
+                                                                                    "pm.collectionVariables.set(\u0027sales_token\u0027, json.data.token);"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "f5a55c92-3b6e-474b-86c0-95d34733c56f",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"sales@nongsan.vn\",\n  \"mat_khau\": \"12345678\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "Dang nhap tai khoan Sales de lay JWT token"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:06.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:06.000Z",
+                                      "uid":  "60411309-f5a55c92-3b6e-474b-86c0-95d34733c56f"
+                                  },
+                                  {
+                                      "name":  "04. Get Products - Lay product_id Ca chua bi",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "const list = json.data || [];",
+                                                                                    "const tomato = list.find(p =\u003e p.sku === \u0027CA-CHUA-BI\u0027) || list.find(p =\u003e (p.ten_san_pham || \u0027\u0027).includes(\u0027Cà chua bi\u0027));",
+                                                                                    "pm.test(\u0027Tim thay san pham Ca chua bi\u0027, function () { pm.expect(tomato).to.be.an(\u0027object\u0027); });",
+                                                                                    "if (tomato) { pm.environment.set(\u0027tomato_product_id\u0027, String(tomato.id)); pm.collectionVariables.set(\u0027tomato_product_id\u0027, String(tomato.id)); }"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "f4bb9fe5-9c12-49e2-a609-592c374e69cc",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/products",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "products"
+                                                                           ]
+                                                              },
+                                                      "description":  "Lay danh sach san pham va luu product_id cua Ca chua bi (CA-CHUA-BI)"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:08.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:08.000Z",
+                                      "uid":  "60411309-f4bb9fe5-9c12-49e2-a609-592c374e69cc"
+                                  },
+                                  {
+                                      "name":  "05. Add Cart Item - Chuan bi cho TC-10",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Them vao gio hang thanh cong (201)\u0027, function () { pm.response.to.have.status(201); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Luu duoc cart_item_id\u0027, function () { pm.expect(json.data.item.id).to.be.a(\u0027number\u0027); });",
+                                                                                    "pm.environment.set(\u0027cart_item_id\u0027, String(json.data.item.id));",
+                                                                                    "pm.collectionVariables.set(\u0027cart_item_id\u0027, String(json.data.item.id));"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "5513d1b0-2886-45e8-962d-15ea0af57cde",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{customer_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"product_id\": {{tomato_product_id}},\n  \"quantity\": 2\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/cart/items",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "cart",
+                                                                               "items"
+                                                                           ]
+                                                              },
+                                                      "description":  "Them dong san pham vao gio hang Customer de chuan bi cho TC-10"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:10.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:10.000Z",
+                                      "uid":  "60411309-5513d1b0-2886-45e8-962d-15ea0af57cde"
+                                  }
+                              ],
+                     "id":  "fc5467c3-b5a5-45db-be63-aa3aded0dfe0",
+                     "createdAt":  "2026-11-27T06:56:40.000Z",
+                     "updatedAt":  "2026-11-27T06:57:10.000Z",
+                     "uid":  "60411309-fc5467c3-b5a5-45db-be63-aa3aded0dfe0"
+                 },
+                 {
+                     "name":  "01. Bang 5.4 - Kich ban kiem thu Tuan 05 (TC-01..TC-10)",
+                     "item":  [
+                                  {
+                                      "name":  "TC-01 | POST /api/v1/orders - Dat 10 kg Ca chua bi (FEFO)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-01: Dat hang thanh cong (201)\u0027, function () { pm.response.to.have.status(201); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "const details = json.data.order.order_details || [];",
+                                                                                    "pm.test(\u0027TC-01: order_details tach 2 dong FEFO (3 kg -002 va 7 kg -003)\u0027, function () {",
+                                                                                    "    pm.expect(details).to.have.lengthOf(2);",
+                                                                                    "    pm.expect(Number(details[0].so_luong)).to.eql(3);",
+                                                                                    "    pm.expect(details[0].batch.ma_lo).to.match(/-002$/);",
+                                                                                    "    pm.expect(Number(details[1].so_luong)).to.eql(7);",
+                                                                                    "    pm.expect(details[1].batch.ma_lo).to.match(/-003$/);",
+                                                                                    "});",
+                                                                                    "pm.environment.set(\u0027order_id\u0027, String(json.data.order.id));",
+                                                                                    "pm.collectionVariables.set(\u0027order_id\u0027, String(json.data.order.id));"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "3f2ceb6b-202e-43dd-8988-f4cc35f682f1",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{customer_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"ten_nguoi_nhan\": \"Đào Quốc Đạt\",\n  \"so_dien_thoai\": \"0901234565\",\n  \"dia_chi_giao\": \"65 Huỳnh Thúc Kháng, Quận 1, TP. Hồ Chí Minh\",\n  \"cong_thanh_toan\": \"cod\",\n  \"items\": [\n    {\n      \"product_id\": {{tomato_product_id}},\n      \"quantity\": 10\n    }\n  ]\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/orders",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "orders"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-01: Customer dat 10 kg Ca chua bi -\u003e FEFO tach 3 kg lo -002 va 7 kg lo -003"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:41.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:41.000Z",
+                                      "uid":  "60411309-3f2ceb6b-202e-43dd-8988-f4cc35f682f1"
+                                  },
+                                  {
+                                      "name":  "TC-01b | GET /api/v1/batches - Xac nhan ton -002 = 0, -003 = 8",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const rows = pm.response.json().data || [];",
+                                                                                    "const b002 = rows.find(b =\u003e (b.ma_lo || \u0027\u0027).endsWith(\u0027-002\u0027));",
+                                                                                    "const b003 = rows.find(b =\u003e (b.ma_lo || \u0027\u0027).endsWith(\u0027-003\u0027));",
+                                                                                    "pm.test(\u0027TC-01 check: lo -002 = 0 (het_hang) va lo -003 = 8\u0027, function () {",
+                                                                                    "    pm.expect(Number(b002.so_luong_ton)).to.eql(0);",
+                                                                                    "    pm.expect(b002.trang_thai).to.eql(\u0027het_hang\u0027);",
+                                                                                    "    pm.expect(Number(b003.so_luong_ton)).to.eql(8);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "73d15201-a2c9-49f0-9f2d-5c8ab4f4d914",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{farm_staff_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "description":  "Kiem tra ton kho ngay sau TC-01: lo -002 = 0 (het_hang), lo -003 = 8"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:43.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:43.000Z",
+                                      "uid":  "60411309-73d15201-a2c9-49f0-9f2d-5c8ab4f4d914"
+                                  },
+                                  {
+                                      "name":  "TC-02 | POST /api/v1/orders - Dat 9 kg khi ton con 8 kg (422)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-02: Tra ve 422 khi vuot ton kho\u0027, function () { pm.response.to.have.status(422); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027TC-02: Thong diep loi dong nhat tu InsufficientStockException\u0027, function () {",
+                                                                                    "    pm.expect(json.status).to.eql(\u0027error\u0027);",
+                                                                                    "    pm.expect(json.message).to.eql(\u0027Số lượng tồn kho không đủ đáp ứng đơn hàng.\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "57be16dd-4ddf-4d4f-870f-d0b608ae0dc6",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{customer_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"ten_nguoi_nhan\": \"Đào Quốc Đạt\",\n  \"so_dien_thoai\": \"0901234565\",\n  \"dia_chi_giao\": \"65 Huỳnh Thúc Kháng, Quận 1, TP. Hồ Chí Minh\",\n  \"cong_thanh_toan\": \"cod\",\n  \"items\": [\n    {\n      \"product_id\": {{tomato_product_id}},\n      \"quantity\": 9\n    }\n  ]\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/orders",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "orders"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-02: Dat 9 kg khi tong ton hop le chi con 8 kg -\u003e 422 InsufficientStockException \u0026 rollback"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:46.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:46.000Z",
+                                      "uid":  "60411309-57be16dd-4ddf-4d4f-870f-d0b608ae0dc6"
+                                  },
+                                  {
+                                      "name":  "TC-03 | GET /api/v1/batches - Kiem tra lo qua han -001 van ton 5 kg",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-03: Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const rows = pm.response.json().data || [];",
+                                                                                    "const b001 = rows.find(b =\u003e (b.ma_lo || \u0027\u0027).endsWith(\u0027-001\u0027));",
+                                                                                    "const b003 = rows.find(b =\u003e (b.ma_lo || \u0027\u0027).endsWith(\u0027-003\u0027));",
+                                                                                    "pm.test(\u0027TC-03: Lo qua han -001 van ton 5 kg, khong bi tru; lo -003 khong doi sau TC-02\u0027, function () {",
+                                                                                    "    pm.expect(Number(b001.so_luong_ton)).to.eql(5);",
+                                                                                    "    pm.expect(Number(b003.so_luong_ton)).to.eql(8);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "36f56263-9da0-4dde-bd06-148e7cc08381",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{farm_staff_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-03: Sau TC-01 \u0026 TC-02 kiem tra lo qua han -001 van ton 5 kg, va lo -003 van giu nguyen 8 kg"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:47.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:47.000Z",
+                                      "uid":  "60411309-36f56263-9da0-4dde-bd06-148e7cc08381"
+                                  },
+                                  {
+                                      "name":  "TC-04 | POST /api/v1/batches - Thieu ngay_het_han (422)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "const today = new Date().toISOString().slice(0, 10);",
+                                                                                    "pm.variables.set(\u0027today_iso\u0027, today);"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-04: Validation thieu ngay_het_han tra ve 422\u0027, function () { pm.response.to.have.status(422); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027TC-04: JSON loi dong nhat co errors.ngay_het_han\u0027, function () {",
+                                                                                    "    pm.expect(json.status).to.eql(\u0027error\u0027);",
+                                                                                    "    pm.expect(json.errors).to.have.property(\u0027ngay_het_han\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "39a38664-ab5d-44a9-bc3a-a7daa8a58736",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{farm_staff_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"product_id\": {{tomato_product_id}},\n  \"ngay_thu_hoach\": \"{{today_iso}}\",\n  \"so_luong_nhap\": 10\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-04: Farm Staff gui thieu ngay_het_han -\u003e 422 JSON dong nhat, khong tao ban ghi"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:49.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:49.000Z",
+                                      "uid":  "60411309-39a38664-ab5d-44a9-bc3a-a7daa8a58736"
+                                  },
+                                  {
+                                      "name":  "TC-05 | POST /api/v1/batches - Tao lo hop le (201 + QR)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "const now = new Date();",
+                                                                                    "const exp = new Date(now.getTime() + 6 * 86400000);",
+                                                                                    "pm.variables.set(\u0027today_iso\u0027, now.toISOString().slice(0, 10));",
+                                                                                    "pm.variables.set(\u0027expiry_iso\u0027, exp.toISOString().slice(0, 10));"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-05: Tao lo moi thanh cong (201)\u0027, function () { pm.response.to.have.status(201); });",
+                                                                                    "const batch = pm.response.json().data.batch;",
+                                                                                    "pm.test(\u0027TC-05: qr_code tro ve /truy-xuat/{ma_lo}\u0027, function () {",
+                                                                                    "    pm.expect(batch.qr_code).to.include(\u0027/truy-xuat/\u0027 + batch.ma_lo);",
+                                                                                    "});",
+                                                                                    "pm.environment.set(\u0027created_batch_id\u0027, String(batch.id));",
+                                                                                    "pm.collectionVariables.set(\u0027created_batch_id\u0027, String(batch.id));"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "d6d5bdef-a91f-4375-8c92-972bbdc2e536",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{farm_staff_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"product_id\": {{tomato_product_id}},\n  \"ngay_thu_hoach\": \"{{today_iso}}\",\n  \"ngay_het_han\": \"{{expiry_iso}}\",\n  \"so_luong_nhap\": 12\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-05: Farm Staff tao lo hang hop le -\u003e 201 va qr_code tro ve /truy-xuat/{ma_lo}"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:57:51.000Z",
+                                      "updatedAt":  "2026-11-27T06:57:51.000Z",
+                                      "uid":  "60411309-d6d5bdef-a91f-4375-8c92-972bbdc2e536"
+                                  },
+                                  {
+                                      "name":  "TC-06 | GET /api/v1/batches/9999 - ID khong ton tai (404 JSON)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-06: Tra ve 404 Not Found\u0027, function () { pm.response.to.have.status(404); });",
+                                                                                    "pm.test(\u0027TC-06: Phan hoi la JSON (khong phai HTML)\u0027, function () {",
+                                                                                    "    pm.expect(pm.response.headers.get(\u0027Content-Type\u0027) || \u0027\u0027).to.include(\u0027application/json\u0027);",
+                                                                                    "    pm.expect(pm.response.json().status).to.eql(\u0027error\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "76709e8b-58e5-442d-a138-27d7a8a80869",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{farm_staff_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches/9999",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches",
+                                                                               "9999"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-06: GET /api/v1/batches/9999 (ID khong ton tai) -\u003e 404 JSON, khong phai trang HTML"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:58:06.000Z",
+                                      "updatedAt":  "2026-11-27T06:58:06.000Z",
+                                      "uid":  "60411309-76709e8b-58e5-442d-a138-27d7a8a80869"
+                                  },
+                                  {
+                                      "name":  "TC-07 | POST /api/v1/batches - Khong gui token (401 JSON)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-07: Khong gui token tra ve 401\u0027, function () { pm.response.to.have.status(401); });",
+                                                                                    "pm.test(\u0027TC-07: Phan hoi 401 la JSON chuan\u0027, function () {",
+                                                                                    "    pm.expect(pm.response.headers.get(\u0027Content-Type\u0027) || \u0027\u0027).to.include(\u0027application/json\u0027);",
+                                                                                    "    pm.expect(pm.response.json().status).to.eql(\u0027error\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "266e4bef-0e75-4c46-a91e-31ac8664ecef",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"product_id\": {{tomato_product_id}}\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-07: POST /api/v1/batches khong gui token -\u003e 401 JSON"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:58:07.000Z",
+                                      "updatedAt":  "2026-11-27T06:58:07.000Z",
+                                      "uid":  "60411309-266e4bef-0e75-4c46-a91e-31ac8664ecef"
+                                  },
+                                  {
+                                      "name":  "TC-08 | PUT /api/v1/batches/{id} - Customer bi chan 403 JSON",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "const now = new Date();",
+                                                                                    "const exp = new Date(now.getTime() + 7 * 86400000);",
+                                                                                    "pm.variables.set(\u0027today_iso\u0027, now.toISOString().slice(0, 10));",
+                                                                                    "pm.variables.set(\u0027expiry_iso\u0027, exp.toISOString().slice(0, 10));"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-08: Customer goi PUT /batches/{id} bi chan 403\u0027, function () { pm.response.to.have.status(403); });",
+                                                                                    "pm.test(\u0027TC-08: Phan hoi 403 la JSON chuan\u0027, function () {",
+                                                                                    "    pm.expect(pm.response.headers.get(\u0027Content-Type\u0027) || \u0027\u0027).to.include(\u0027application/json\u0027);",
+                                                                                    "    pm.expect(pm.response.json().status).to.eql(\u0027error\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "22b58654-c8e2-44f9-93c0-d267160e6ee9",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{customer_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"ngay_thu_hoach\": \"{{today_iso}}\",\n  \"ngay_het_han\": \"{{expiry_iso}}\",\n  \"so_luong_nhap\": 12\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/batches/{{created_batch_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "batches",
+                                                                               "{{created_batch_id}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-08: PUT /api/v1/batches/{id} bang tai khoan Customer -\u003e 403 JSON"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:58:10.000Z",
+                                      "updatedAt":  "2026-11-27T06:58:10.000Z",
+                                      "uid":  "60411309-22b58654-c8e2-44f9-93c0-d267160e6ee9"
+                                  },
+                                  {
+                                      "name":  "TC-09 | PATCH /api/v1/orders/{id}/status - Sales duyet don (200)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-09: Cap nhat trang thai don thanh cong (200)\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027TC-09: Trang thai don duoc cap nhat thanh da_duyet\u0027, function () {",
+                                                                                    "    pm.expect(json.success).to.eql(true);",
+                                                                                    "    pm.expect(json.data.trang_thai).to.eql(\u0027da_duyet\u0027);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "95a8d9c8-b097-4ed2-bf58-5572e7fe07bb",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{sales_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"trang_thai\": \"da_duyet\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/orders/{{order_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "orders",
+                                                                               "{{order_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-09: PATCH /api/v1/orders/{id}/status Sales doi trang thai don hop le -\u003e 200"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:58:12.000Z",
+                                      "updatedAt":  "2026-11-27T06:58:12.000Z",
+                                      "uid":  "60411309-95a8d9c8-b097-4ed2-bf58-5572e7fe07bb"
+                                  },
+                                  {
+                                      "name":  "TC-10 | DELETE /api/v1/cart/items/{id} - Xoa dong gio hang (200)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027TC-10: Xoa dong gio hang thanh cong (200)\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "const targetId = Number(pm.environment.get(\u0027cart_item_id\u0027) || pm.collectionVariables.get(\u0027cart_item_id\u0027));",
+                                                                                    "pm.test(\u0027TC-10: Dong gio hang bi xoa khoi danh sach\u0027, function () {",
+                                                                                    "    pm.expect(json.success).to.eql(true);",
+                                                                                    "    pm.expect(Number(json.data.deleted_item_id)).to.eql(targetId);",
+                                                                                    "    const stillExists = (json.data.items || []).some(item =\u003e Number(item.id) === targetId);",
+                                                                                    "    pm.expect(stillExists).to.eql(false);",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "id":  "968ee553-2621-4062-a409-783355975c4e",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{customer_token}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/v1/cart/items/{{cart_item_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "cart",
+                                                                               "items",
+                                                                               "{{cart_item_id}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "TC-10: DELETE /api/v1/cart/items/{id} Customer xoa san pham trong gio -\u003e 200"
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "createdAt":  "2026-11-27T06:58:14.000Z",
+                                      "updatedAt":  "2026-11-27T06:58:14.000Z",
+                                      "uid":  "60411309-968ee553-2621-4062-a409-783355975c4e"
+                                  }
+                              ],
+                     "id":  "3868b02c-0db0-406f-afd3-87206db71199",
+                     "createdAt":  "2026-11-27T06:56:42.000Z",
+                     "updatedAt":  "2026-11-27T06:58:14.000Z",
+                     "uid":  "60411309-3868b02c-0db0-406f-afd3-87206db71199"
+                 }
+             ]
+}

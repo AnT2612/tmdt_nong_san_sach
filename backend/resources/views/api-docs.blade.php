@@ -75,6 +75,7 @@
             <tr><td><span class="method">PUT</span></td><td><code>/api/v1/auth/profile</code></td><td>Cập nhật hồ sơ cá nhân</td><td>JWT</td></tr>
             <tr><td><span class="method method-dark">POST</span></td><td><code>/api/v1/auth/logout</code></td><td>Đăng xuất</td><td>JWT</td></tr>
             <tr><td><span class="method">GET / POST / DELETE</span></td><td><code>/api/v1/addresses</code></td><td>Quản lý sổ địa chỉ (<code>vi_do</code>, <code>kinh_do</code>)</td><td>JWT</td></tr>
+            <tr><td><span class="method">GET / POST / PATCH / DELETE</span></td><td><code>/api/v1/cart</code>, <code>/api/v1/cart/items/{id}</code></td><td>Quản lý giỏ hàng server-side của khách</td><td>JWT</td></tr>
         </tbody>
     </table>
 

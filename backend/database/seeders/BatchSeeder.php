@@ -43,7 +43,7 @@ class BatchSeeder extends Seeder
                 'ma_lo'          => "LO-{$dateTag}-002",
                 'days_expiry'    => 1,
                 'so_luong_nhap'  => 5,
-                'so_luong_ton'   => 2,
+                'so_luong_ton'   => 3,
                 'so_luong_hh'    => 1,
                 'trang_thai'     => Batch::STATUS_CAN_HAN,
                 'gia_xa_hang'    => 35000,

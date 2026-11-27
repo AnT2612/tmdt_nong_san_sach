@@ -58,9 +58,7 @@ class FefoService
                 $totalAvailable = round((float) $batches->sum('so_luong_ton'), 2);
 
                 if ($totalAvailable < $need) {
-                    throw new InsufficientStockException(
-                        "Sản phẩm {$product->ten_san_pham} chỉ còn {$totalAvailable} {$product->don_vi_tinh}, không đủ {$need} {$product->don_vi_tinh}."
-                    );
+                    throw new InsufficientStockException('Số lượng tồn kho không đủ đáp ứng đơn hàng.');
                 }
 
                 if (isset($line['detail'])) {
