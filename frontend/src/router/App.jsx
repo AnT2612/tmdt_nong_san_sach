@@ -68,7 +68,7 @@ export default function App() {
           <Route path="/dang-nhap" element={<AuthPage mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage mode="register" />} />
 
-          <Route path="/don-hang" element={<RequireAuth><OrderListPage /></RequireAuth>} />
+          <Route path="/don-hang" element={<OrderListPage />} />
           <Route path="/khieu-nai/:orderId" element={<RequireAuth><ComplaintPage /></RequireAuth>} />
 
           <Route

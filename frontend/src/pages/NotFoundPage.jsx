@@ -1,8 +1,3 @@
-/**
- * NGƯỜI PHỤ TRÁCH: Đào Quốc Đạt (0306241190)
- * CHỨC NĂNG: Trang báo lỗi 404 - đường dẫn không tồn tại.
- */
-
 import { Link } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 

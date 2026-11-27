@@ -1,16 +1,3 @@
-/**
- * NGƯỜI PHỤ TRÁCH: Đào Quốc Đạt (0306241190)
- * CHỨC NĂNG: Bộ icon dạng SVG tự vẽ, dùng thay emoji.
- *
- *   Vì sao tự vẽ thay vì dùng emoji hay thư viện ngoài:
- *   - Emoji hiển thị khác nhau trên mỗi máy và làm giao diện trông nghiệp dư.
- *   - Thư viện icon phải cài thêm, tăng dung lượng, trong khi dự án chỉ
- *     cần khoảng chục hình.
- *   - Tự vẽ bảo đảm mọi icon cùng nét (stroke 1.6) và cùng góc nhìn.
- *
- *   Cách dùng:  <Icon name="cart" size={20} />
- */
-
 const PATHS = {
   // Giỏ hàng
   cart: (
