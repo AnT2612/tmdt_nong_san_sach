@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Services\TraceabilityService;
+use App\Services\QrGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -13,69 +13,72 @@ class TraceabilityController extends Controller
     use ApiResponse;
 
     public function __construct(
-        private readonly TraceabilityService $traceabilityService,
+        private readonly QrGeneratorService $qrService,
     ) {
     }
 
-    // Hồ sơ truy xuất nguồn gốc của một lô
-    public function show(string $token): JsonResponse
+    public function show(string $code): JsonResponse
     {
-        $batch = $this->traceabilityService->findByToken($token);
+        $batch = $this->qrService->findByCode($code);
 
         if ($batch === null) {
-            return $this->error('Mã QR không hợp lệ hoặc lô hàng không còn tồn tại.', 404);
+            return $this->error('Mã QR không hợp lệ hoặc lô hàng không tồn tại.', 404);
         }
 
         $product = $batch->product;
 
         return $this->success([
             'batch' => [
-                'batch_code'      => $batch->batch_code,
-                'planted_date'    => $batch->planted_date?->format('d/m/Y'),
-                'harvest_date'    => $batch->harvest_date?->format('d/m/Y'),
-                'expiry_date'     => $batch->expiry_date?->format('d/m/Y'),
+                'id'                => $batch->id,
+                'ma_lo'             => $batch->ma_lo,
+                'qr_code'           => $batch->qr_code,
+                'ngay_thu_hoach'    => $batch->ngay_thu_hoach?->format('d/m/Y'),
+                'ngay_het_han'      => $batch->ngay_het_han?->format('d/m/Y'),
                 'days_until_expiry' => $batch->daysUntilExpiry(),
-                'quality_note'    => $batch->quality_note,
-                'status'          => $batch->status,
+                'trang_thai'        => $batch->trang_thai,
             ],
             'product' => [
-                'name'        => $product?->name,
-                'unit'        => $product?->unit,
-                'origin'      => $product?->origin,
-                'thumbnail'   => $product?->thumbnail_url,
-                'certification' => $product?->certification_summary,
-                'category'    => $product?->category?->name,
+                'ten_san_pham'      => $product?->ten_san_pham,
+                'don_vi_tinh'       => $product?->don_vi_tinh,
+                'hinh_anh_dai_dien' => $product?->hinh_anh_dai_dien,
+                'chung_nhan'        => $product?->chung_nhan,
+                'ten_danh_muc'      => $product?->category?->ten_danh_muc,
             ],
             'farmer' => [
-                'full_name' => $batch->farmStaff?->full_name,
+                'ho_ten' => $batch->creator?->ho_ten,
             ],
-            // Dòng thời gian nhật ký canh tác - phần quan trọng nhất của trang này.
             'timeline' => $batch->farmingLogs->map(fn ($log) => [
-                'activity_type' => $log->activity_type,
-                'activity_date' => $log->activity_date?->format('d/m/Y'),
-                'title'         => $log->title,
-                'description'   => $log->description,
-                'media'         => $log->media ?? [],
-                'author'        => $log->author?->full_name,
+                'id'                  => $log->id,
+                'hanh_dong'           => $log->hanh_dong,
+                'mo_ta'               => $log->mo_ta,
+                'hinh_anh_minh_chung' => $log->hinh_anh_minh_chung,
+                'thoi_gian'           => $log->thoi_gian?->format('d/m/Y H:i'),
+                'farm_staff'          => $log->farmStaff?->ho_ten,
             ])->toArray(),
-        ], 'Lấy thông tin truy xuất nguồn gốc thành công.');
+            'certificates' => $batch->certificates->map(fn ($cert) => [
+                'id'              => $cert->id,
+                'ten_chung_nhan'  => $cert->ten_chung_nhan,
+                'file_minh_chung' => $cert->file_minh_chung,
+                'ngay_cap'        => $cert->ngay_cap?->format('d/m/Y'),
+                'ngay_het_han'    => $cert->ngay_het_han?->format('d/m/Y'),
+                'uploaded_by'     => $cert->uploader?->ho_ten,
+            ])->toArray(),
+        ], 'Lấy hồ sơ truy xuất nguồn gốc thành công.');
     }
 
-    // Sinh ảnh QR dạng SVG
-    // Frontend nhận chuỗi SVG này để hiển thị hoặc in tem
-    public function qrCode(string $token): Response
+    public function qrCode(string $code): Response
     {
-        $batch = $this->traceabilityService->findByToken($token);
+        $batch = $this->qrService->findByCode($code);
 
         if ($batch === null) {
             return response('Không tìm thấy lô hàng.', 404);
         }
 
-        $svg = $this->traceabilityService->qrSvg($batch);
+        $svg = $this->qrService->qrSvg($batch);
 
         return response($svg, 200, [
             'Content-Type'        => 'image/svg+xml',
-            'Content-Disposition' => 'inline; filename="qr-' . $batch->batch_code . '.svg"',
+            'Content-Disposition' => 'inline; filename="qr-' . $batch->ma_lo . '.svg"',
         ]);
     }
 }

@@ -2,80 +2,84 @@
 
 namespace App\Services;
 
-use App\Models\SystemSetting;
-
 class ShippingService
 {
-    // Phí cơ bản cho 3km đầu tiên
+    private const FARM_LAT = 11.0067;
+    private const FARM_LNG = 106.4944;
+
     private const BASE_FEE = 15000;
-
-    // Phí cộng thêm cho mỗi km tiếp theo
-    private const FEE_PER_KM = 4000;
-
-    // Khoảng cách tối đa phục vụ (km). Xa hơn thì không nhận đơn.
-    private const MAX_DISTANCE_KM = 25;
-
-    // Đơn hàng từ mức này trở lên được miễn phí giao hàng
+    private const FEE_PER_KM = 5000;
+    private const MAX_DISTANCE_KM = 25.0;
+    private const FREE_DISTANCE_KM = 3.0;
     private const FREE_SHIPPING_THRESHOLD = 300000;
 
-    // Bảng khoảng cách giả lập từ nông trại (Củ Chi) đến các quận nội thành
-    // Dùng làm phương án dự phòng khi chưa có Google Maps API key
-    private const DISTANCE_MAP = [
-        'củ chi'        => 8,
-        'hóc môn'       => 12,
-        'quận 12'       => 15,
-        'bình thạnh'    => 22,
-        'phú nhuận'     => 24,
-        'gò vấp'        => 20,
-        'tân bình'      => 23,
-        'tân phú'       => 19,
-        'quận 1'        => 26,
-        'quận 3'        => 25,
-        'quận 10'       => 23,
+    private const DISTRICT_DISTANCE_MAP = [
+        'củ chi'     => 8.0,
+        'hóc môn'    => 12.0,
+        'quận 12'    => 15.0,
+        'gò vấp'     => 19.0,
+        'tân phú'    => 19.0,
+        'bình thạnh' => 22.0,
+        'tân bình'   => 22.0,
+        'quận 10'    => 23.0,
+        'phú nhuận'  => 24.0,
+        'quận 3'     => 24.5,
+        'quận 1'     => 25.0,
     ];
 
-    // Khoảng cách mặc định khi không nhận ra địa chỉ
-    private const DEFAULT_DISTANCE_KM = 15;
+    public function calculate(
+        string $shippingAddress,
+        float $subtotal,
+        string $deliveryType = 'thuong',
+        ?float $lat = null,
+        ?float $lng = null
+    ): array {
+        $distanceKm = ($lat !== null && $lng !== null)
+            ? $this->haversineKm(self::FARM_LAT, self::FARM_LNG, $lat, $lng) * 1.25
+            : $this->estimateDistanceKm($shippingAddress);
 
-    // Tính phí giao hàng
-    public function calculateFee(string $shippingAddress, float $subtotal): float
-    {
-        // Đơn lớn thì miễn phí giao hàng để khuyến khích mua nhiều.
-        $threshold = (float) SystemSetting::get('shipping.free_threshold', self::FREE_SHIPPING_THRESHOLD);
+        $distanceKm = round($distanceKm, 2);
 
-        if ($subtotal >= $threshold) {
-            return 0;
+        if ($subtotal >= self::FREE_SHIPPING_THRESHOLD && $deliveryType !== 'hoa_toc') {
+            return ['khoang_cach_km' => $distanceKm, 'phi_van_chuyen' => 0.0];
         }
 
-        $distanceKm = $this->estimateDistanceKm($shippingAddress);
-
-        if ($distanceKm > self::MAX_DISTANCE_KM) {
-            return (float) (self::BASE_FEE + (self::MAX_DISTANCE_KM - 3) * self::FEE_PER_KM);
+        if ($distanceKm <= self::FREE_DISTANCE_KM) {
+            $fee = $deliveryType === 'hoa_toc' ? 15000.0 : 0.0;
+            return ['khoang_cach_km' => $distanceKm, 'phi_van_chuyen' => $fee];
         }
 
-        if ($distanceKm <= 3) {
-            return (float) self::BASE_FEE;
+        $cappedKm = min($distanceKm, self::MAX_DISTANCE_KM);
+        $fee = ceil($cappedKm) * self::FEE_PER_KM;
+        if ($deliveryType === 'hoa_toc') {
+            $fee += self::BASE_FEE;
         }
 
-        $extraKm = $distanceKm - 3;
-
-        return (float) (self::BASE_FEE + $extraKm * self::FEE_PER_KM);
+        return ['khoang_cach_km' => $distanceKm, 'phi_van_chuyen' => (float) $fee];
     }
 
-    // Ước lượng khoảng cách từ chuỗi địa chỉ
-    //
-    // Cách làm: tìm tên quận trong địa chỉ, tra bảng DISTANCE_MAP
-    // Đây là dummy data - xem ghi chú đầu file
-    public function estimateDistanceKm(string $shippingAddress): int
+    public function estimateDistanceKm(string $shippingAddress): float
     {
         $normalized = mb_strtolower($shippingAddress);
 
-        foreach (self::DISTANCE_MAP as $district => $km) {
+        foreach (self::DISTRICT_DISTANCE_MAP as $district => $km) {
             if (str_contains($normalized, $district)) {
                 return $km;
             }
         }
 
-        return self::DEFAULT_DISTANCE_KM;
+        return 12.0;
+    }
+
+    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return $earthRadius * (2 * asin(min(1.0, sqrt($a))));
     }
 }

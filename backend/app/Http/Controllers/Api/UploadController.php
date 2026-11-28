@@ -1,5 +1,23 @@
 <?php
 
+
+
+/**
+ * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
+ * PHỐI HỢP: Trần Thanh An (0306241171 - Khiếu nại), Nguyễn Thanh Liêm (0306241214 - Nhật ký canh tác)
+ * CHỨC NĂNG: Controller tiếp nhận tệp tải lên (ảnh / video) và đẩy lên Cloudinary.
+ *
+ *   Mục tiêu:
+ *     - Nhận tệp từ giao diện (ảnh hoặc video minh chứng).
+ *     - Kiểm tra định dạng và dung lượng theo chuẩn đặc tả UC-03 Tuần 2:
+ *         + Ảnh: JPG, PNG, WEBP <= 5 MB.
+ *         + Video: MP4, MOV <= 30 MB.
+ *     - Đẩy trực tiếp lên dịch vụ Cloudinary để tối ưu băng thông máy chủ.
+ *     - Kế hoạch rủi ro kỹ thuật (Tuần 1): Nếu chưa cấu hình Cloudinary hoặc lỗi mạng,
+ *       hệ thống tự động lưu vào storage cục bộ (local fallback) để đảm bảo không gián đoạn đồ án.
+ */
+
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ApiResponse;
@@ -15,7 +33,16 @@ class UploadController extends Controller
 {
     use ApiResponse;
 
+
     // Tải lên tệp minh chứng (ảnh hoặc video)
+
+    /**
+     * TẢI LÊN TỆP MINH CHỨNG (ẢNH HOẶC VIDEO).
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([

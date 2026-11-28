@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\CustomerSubscription;
-use App\Models\SubscriptionPlan;
+use App\Models\Product;
+use App\Models\Subscription;
 use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,56 +20,59 @@ class SubscriptionController extends Controller
     ) {
     }
 
-    // Danh sách gói đang bán (công khai, không cần đăng nhập)
     public function plans(): JsonResponse
     {
-        $plans = SubscriptionPlan::query()
-            ->with('items.product:id,name,unit,thumbnail_url,price')
-            ->where('is_active', true)
-            ->get();
+        $plans = collect(config('subscriptions.plans', []))->map(function (array $plan) {
+            $items = collect($plan['items'])->map(function (array $line) {
+                $product = Product::where('sku', $line['sku'])->first();
+                return [
+                    'product_id'   => $product?->id,
+                    'ten_san_pham' => $product?->ten_san_pham ?? $line['sku'],
+                    'don_vi_tinh'  => $product?->don_vi_tinh ?? 'kg',
+                    'so_luong'     => (float) $line['so_luong'],
+                ];
+            })->all();
+
+            return array_merge($plan, ['items' => $items]);
+        });
 
         return $this->success($plans, 'Lấy danh sách gói định kỳ thành công.');
     }
 
-    // Khách đăng ký gói
     public function subscribe(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'subscription_plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
-            'start_date'           => ['nullable', 'date', 'after_or_equal:today'],
-            'delivery_weekdays'    => ['nullable', 'array', 'min:1'],
-            'delivery_weekdays.*'  => ['integer', 'between:1,7'],
-            'receiver_name'        => ['required', 'string', 'max:100'],
-            'receiver_phone'       => ['required', 'string', 'max:20'],
-            'shipping_address'     => ['required', 'string', 'max:255'],
-            'payment_method'       => ['nullable', 'in:cod,vnpay'],
-            'note'                 => ['nullable', 'string', 'max:500'],
+            'plan_code'            => ['required', 'string'],
+            'ngay_bat_dau'         => ['nullable', 'date', 'after_or_equal:today'],
+            'ngay_giao_trong_tuan' => ['nullable', 'string', 'max:20'],
+            'dia_chi_giao'         => ['required', 'string', 'max:255'],
+            'khung_gio'            => ['nullable', 'string', 'max:30'],
+            'cong_thanh_toan'      => ['nullable', 'in:cod,momo,vnpay,vietqr'],
         ], [
-            'subscription_plan_id.required' => 'Vui lòng chọn gói định kỳ.',
-            'receiver_name.required'        => 'Vui lòng nhập tên người nhận.',
-            'receiver_phone.required'       => 'Vui lòng nhập số điện thoại.',
-            'shipping_address.required'     => 'Vui lòng nhập địa chỉ giao hàng.',
-            'delivery_weekdays.*.between'   => 'Ngày giao phải từ Thứ 2 (1) đến Chủ nhật (7).',
+            'plan_code.required'    => 'Vui lòng chọn gói định kỳ.',
+            'dia_chi_giao.required' => 'Vui lòng nhập địa chỉ giao hàng.',
         ]);
 
-        $plan = SubscriptionPlan::findOrFail($validated['subscription_plan_id']);
+        $planConfig = collect(config('subscriptions.plans', []))
+            ->firstWhere('code', $validated['plan_code']);
+
+        if ($planConfig === null) {
+            return $this->error('Không tìm thấy gói định kỳ đã chọn.', 404);
+        }
 
         $subscription = $this->subscriptionService->subscribe(
             Auth::guard('api')->user(),
-            $plan,
+            $planConfig,
             $validated,
         );
 
-        return $this->success([
-            'subscription' => $subscription->load('plan'),
-        ], 'Đăng ký gói định kỳ thành công. Hệ thống sẽ tự sinh đơn theo lịch.', 201);
+        return $this->success(['subscription' => $subscription], 'Đăng ký gói định kỳ thành công.', 201);
     }
 
-    // Danh sách gói của chính khách
     public function mySubscriptions(): JsonResponse
     {
-        $subscriptions = CustomerSubscription::query()
-            ->with('plan:id,name,price,duration_days', 'orders:id,order_code,status,created_at,subscription_id')
+        $subscriptions = Subscription::query()
+            ->with(['items.product:id,ten_san_pham,don_vi_tinh', 'deliverySchedules', 'orders:id,ma_don,trang_thai,ngay_tao,subscription_id'])
             ->where('user_id', Auth::guard('api')->id())
             ->latest()
             ->get();
@@ -77,39 +80,32 @@ class SubscriptionController extends Controller
         return $this->success($subscriptions, 'Lấy danh sách gói của bạn thành công.');
     }
 
-    // Tạm dừng gói
     public function pause(int $id): JsonResponse
     {
-        $subscription = CustomerSubscription::where('user_id', Auth::guard('api')->id())->find($id);
-
+        $subscription = Subscription::where('user_id', Auth::guard('api')->id())->find($id);
         if ($subscription === null) {
             return $this->error('Không tìm thấy gói định kỳ.', 404);
         }
 
-        if ($subscription->status !== CustomerSubscription::STATUS_ACTIVE) {
+        if ($subscription->trang_thai !== Subscription::STATUS_ACTIVE) {
             return $this->error('Chỉ có thể tạm dừng gói đang hoạt động.', 422);
         }
 
-        $subscription->status = CustomerSubscription::STATUS_PAUSED;
+        $subscription->trang_thai = Subscription::STATUS_PAUSED;
         $subscription->save();
 
         return $this->success($subscription, 'Đã tạm dừng gói định kỳ.');
     }
 
-    // Sales dời một kỳ giao (thiếu hàng / mất mùa)
     public function skip(int $id): JsonResponse
     {
-        $subscription = CustomerSubscription::find($id);
-
+        $subscription = Subscription::find($id);
         if ($subscription === null) {
             return $this->error('Không tìm thấy gói định kỳ.', 404);
         }
 
-        $subscription = $this->subscriptionService->skipDelivery(
-            $subscription,
-            Auth::guard('api')->user(),
-        );
+        $schedule = $this->subscriptionService->skipSchedule($subscription);
 
-        return $this->success($subscription, 'Đã dời kỳ giao sang ngày kế tiếp.');
+        return $this->success($schedule, 'Đã bỏ qua kỳ giao tiếp theo.');
     }
 }

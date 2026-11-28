@@ -3,128 +3,211 @@
 namespace Database\Seeders;
 
 use App\Models\Batch;
+use App\Models\BatchAlert;
+use App\Models\Certificate;
 use App\Models\FarmingLog;
-use App\Models\InventoryTransaction;
+use App\Models\LossRecord;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\User;
-use App\Services\TraceabilityService;
+use App\Services\QrGeneratorService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class BatchSeeder extends Seeder
 {
     public function run(): void
     {
-        $farmStaff = User::where('role', User::ROLE_FARM_STAFF)->first();
-        $warehouse = User::where('role', User::ROLE_WAREHOUSE_STAFF)->first();
-        $traceabilityService = app(TraceabilityService::class);
+        $farmStaff = User::whereHas('role', fn ($q) => $q->where('ten_vai_tro', Role::FARM_STAFF))->first();
 
-        // Cấu hình từng lô mẫu: [sku sản phẩm, số lượng, số ngày còn lại đến hạn]
-        $batchTemplates = [
-            // Cà chua bi: lô cận hạn 2kg + lô còn nhiều 10kg => demo FEFO chia lô
-            ['sku' => 'CA-CHUA-BI', 'quantity' => 2,   'days_until_expiry' => 2],
-            ['sku' => 'CA-CHUA-BI', 'quantity' => 10,  'days_until_expiry' => 7],
+        if ($farmStaff === null) {
+            return;
+        }
 
-            // Các sản phẩm khác để trang danh sách có hàng
-            ['sku' => 'RAU-MUONG',  'quantity' => 30,  'days_until_expiry' => 3],
-            ['sku' => 'CAI-NGOT',   'quantity' => 18,  'days_until_expiry' => 4],
-            ['sku' => 'CA-ROT',     'quantity' => 25,  'days_until_expiry' => 12],
-            ['sku' => 'DUA-LEO',    'quantity' => 15,  'days_until_expiry' => 5],
-            ['sku' => 'HANH-LA',    'quantity' => 40,  'days_until_expiry' => 3],
+        $qrService = app(QrGeneratorService::class);
+        $dateTag   = now()->format('Ymd');
+
+        $templates = [
+            // Bảng 5.1 Word: kịch bản kiểm thử FEFO đa nhánh trên Cà chua bi
+            [
+                'sku'            => 'CA-CHUA-BI',
+                'ma_lo'          => "LO-{$dateTag}-001",
+                'days_expiry'    => -1,
+                'so_luong_nhap'  => 5,
+                'so_luong_ton'   => 5,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_HET_HAN,
+                'gia_xa_hang'    => null,
+            ],
+            [
+                'sku'            => 'CA-CHUA-BI',
+                'ma_lo'          => "LO-{$dateTag}-002",
+                'days_expiry'    => 1,
+                'so_luong_nhap'  => 5,
+                'so_luong_ton'   => 2,
+                'so_luong_hh'    => 1,
+                'trang_thai'     => Batch::STATUS_CAN_HAN,
+                'gia_xa_hang'    => 35000,
+            ],
+            [
+                'sku'            => 'CA-CHUA-BI',
+                'ma_lo'          => "LO-{$dateTag}-003",
+                'days_expiry'    => 5,
+                'so_luong_nhap'  => 15,
+                'so_luong_ton'   => 15,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_CON_HANG,
+                'gia_xa_hang'    => null,
+            ],
+            [
+                'sku'            => 'CA-CHUA-BI',
+                'ma_lo'          => "LO-{$dateTag}-004",
+                'days_expiry'    => 4,
+                'so_luong_nhap'  => 8,
+                'so_luong_ton'   => 0,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_HET_HANG,
+                'gia_xa_hang'    => null,
+            ],
+            // Các nông sản khác
+            [
+                'sku'            => 'RAU-MUONG',
+                'ma_lo'          => "LO-{$dateTag}-005",
+                'days_expiry'    => 2,
+                'so_luong_nhap'  => 30,
+                'so_luong_ton'   => 28,
+                'so_luong_hh'    => 2,
+                'trang_thai'     => Batch::STATUS_CAN_HAN,
+                'gia_xa_hang'    => 9000,
+            ],
+            [
+                'sku'            => 'CAI-NGOT',
+                'ma_lo'          => "LO-{$dateTag}-006",
+                'days_expiry'    => 4,
+                'so_luong_nhap'  => 18,
+                'so_luong_ton'   => 18,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_CON_HANG,
+                'gia_xa_hang'    => null,
+            ],
+            [
+                'sku'            => 'CA-ROT',
+                'ma_lo'          => "LO-{$dateTag}-007",
+                'days_expiry'    => 12,
+                'so_luong_nhap'  => 25,
+                'so_luong_ton'   => 25,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_CON_HANG,
+                'gia_xa_hang'    => null,
+            ],
+            [
+                'sku'            => 'DUA-LEO',
+                'ma_lo'          => "LO-{$dateTag}-008",
+                'days_expiry'    => 5,
+                'so_luong_nhap'  => 15,
+                'so_luong_ton'   => 14,
+                'so_luong_hh'    => 1,
+                'trang_thai'     => Batch::STATUS_CON_HANG,
+                'gia_xa_hang'    => null,
+            ],
+            [
+                'sku'            => 'HANH-LA',
+                'ma_lo'          => "LO-{$dateTag}-009",
+                'days_expiry'    => 3,
+                'so_luong_nhap'  => 40,
+                'so_luong_ton'   => 40,
+                'so_luong_hh'    => 0,
+                'trang_thai'     => Batch::STATUS_CON_HANG,
+                'gia_xa_hang'    => null,
+            ],
         ];
 
-        foreach ($batchTemplates as $index => $template) {
-            $product = Product::where('sku', $template['sku'])->first();
+        foreach ($templates as $index => $item) {
+            $product = Product::where('sku', $item['sku'])->first();
 
             if ($product === null) {
                 continue;
             }
 
-            $expiryDate  = now()->addDays($template['days_until_expiry'])->startOfDay();
-            $harvestDate = $expiryDate->copy()->subDays($product->shelf_life_days);
-            $plantedDate = $harvestDate->copy()->subDays(30);
+            $expiryDate  = now()->addDays($item['days_expiry'])->startOfDay();
+            $harvestDate = $expiryDate->copy()->subDays(6);
 
-            $batch = Batch::create([
-                'product_id'         => $product->id,
-                'batch_code'         => 'LO-' . now()->format('Ymd') . '-' . str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT),
-                'traceability_token' => $traceabilityService->generateToken(),
-                'farm_staff_id'      => $farmStaff?->id,
-                'planted_date'       => $plantedDate,
-                'harvest_date'       => $harvestDate,
-                'expiry_date'        => $expiryDate,
-                'quantity_imported'  => $template['quantity'],
-                'quantity_available' => $template['quantity'],
-                'status'             => Batch::STATUS_AVAILABLE,
-                'quality_note'       => 'Lô mẫu phục vụ demo đồ án.',
-            ]);
+            $batch = Batch::updateOrCreate(
+                ['ma_lo' => $item['ma_lo']],
+                [
+                    'product_id'       => $product->id,
+                    'ngay_thu_hoach'   => $harvestDate->toDateString(),
+                    'ngay_het_han'     => $expiryDate->toDateString(),
+                    'so_luong_nhap'    => $item['so_luong_nhap'],
+                    'so_luong_ton'     => $item['so_luong_ton'],
+                    'so_luong_hao_hut' => $item['so_luong_hh'],
+                    'qr_code'          => url('/truy-xuat/' . $item['ma_lo']),
+                    'trang_thai'       => $item['trang_thai'],
+                    'gia_xa_hang'      => $item['gia_xa_hang'],
+                    'created_by'       => $farmStaff->id,
+                ]
+            );
 
-            // Ghi thẻ kho nhập hàng.
-            InventoryTransaction::create([
-                'batch_id'      => $batch->id,
-                'type'          => InventoryTransaction::TYPE_IMPORT,
-                'quantity'      => $template['quantity'],
-                'balance_after' => $template['quantity'],
-                'created_by'    => $warehouse?->id ?? $farmStaff?->id,
-                'note'          => 'Nhập kho từ dữ liệu mẫu.',
-            ]);
+            $qrService->generateForBatch($batch);
 
-            // Chỉ tạo nhật ký canh tác chi tiết cho 2 lô đầu tiên
-            // để trang truy xuất nguồn gốc có dòng thời gian đẹp khi demo.
-            if ($index < 2) {
-                $this->createFarmingLogs($batch, $farmStaff, $plantedDate);
+            if ($item['so_luong_hh'] > 0 && $batch->lossRecords()->count() === 0) {
+                LossRecord::create([
+                    'batch_id'   => $batch->id,
+                    'so_luong'   => $item['so_luong_hh'],
+                    'ly_do'      => 'Dập nát trong quá trình phân loại sau thu hoạch',
+                    'hinh_anh'   => null,
+                    'created_by' => $farmStaff->id,
+                    'created_at' => now(),
+                ]);
+            }
+
+            if ($item['trang_thai'] === Batch::STATUS_CAN_HAN && $batch->alerts()->where('trang_thai', BatchAlert::STATUS_DANG_MO)->count() === 0) {
+                BatchAlert::create([
+                    'batch_id'      => $batch->id,
+                    'handled_by'    => null,
+                    'ngay_canh_bao' => now(),
+                    'trang_thai'    => BatchAlert::STATUS_DANG_MO,
+                    'batch_dang_mo' => $batch->id,
+                ]);
+            }
+
+            if ($index < 3 && $batch->farmingLogs()->count() === 0) {
+                $this->seedLogsAndCertificate($batch, $farmStaff);
             }
         }
     }
 
-    // Tạo dòng thời gian nhật ký canh tác mẫu cho một lô
-    private function createFarmingLogs(Batch $batch, ?User $farmStaff, \Carbon\Carbon $plantedDate): void
+    private function seedLogsAndCertificate(Batch $batch, User $farmStaff): void
     {
-        if ($farmStaff === null) {
-            return;
-        }
+        $planted = $batch->ngay_thu_hoach->copy()->subDays(25);
 
         $logs = [
-            [
-                'activity_type' => 'planting',
-                'activity_date' => $plantedDate->copy(),
-                'title'         => 'Gieo hạt giống',
-                'description'   => 'Gieo hạt trong nhà lưới, giá thể hữu cơ đã khử trùng.',
-            ],
-            [
-                'activity_type' => 'watering',
-                'activity_date' => $plantedDate->copy()->addDays(5),
-                'title'         => 'Tưới nước hệ thống nhỏ giọt',
-                'description'   => 'Tưới 2 lần/ngày, mỗi lần 20 phút.',
-            ],
-            [
-                'activity_type' => 'fertilizing',
-                'activity_date' => $plantedDate->copy()->addDays(12),
-                'title'         => 'Bón phân hữu cơ',
-                'description'   => 'Bón phân trùn quế, không dùng phân hóa học.',
-            ],
-            [
-                'activity_type' => 'inspection',
-                'activity_date' => $plantedDate->copy()->addDays(20),
-                'title'         => 'Kiểm tra sâu bệnh',
-                'description'   => 'Không phát hiện sâu bệnh, cây sinh trưởng tốt.',
-            ],
-            [
-                'activity_type' => 'harvesting',
-                'activity_date' => $batch->harvest_date?->copy() ?? now(),
-                'title'         => 'Thu hoạch',
-                'description'   => 'Thu hoạch vào sáng sớm, đóng gói ngay để giữ độ tươi.',
-            ],
+            ['hanh_dong' => 'Gieo hạt',         'mo_ta' => 'Gieo hạt trong nhà lưới, giá thể hữu cơ đã khử trùng.', 'offset' => 0],
+            ['hanh_dong' => 'Tưới nhỏ giọt',    'mo_ta' => 'Tưới tự động 2 lần/ngày bằng nước giếng kiểm định.',   'offset' => 6],
+            ['hanh_dong' => 'Bón phân hữu cơ',  'mo_ta' => 'Bón phân trùn quế, không dùng phân bón hóa học.',     'offset' => 14],
+            ['hanh_dong' => 'Kiểm tra sâu bệnh','mo_ta' => 'Cây sinh trưởng khỏe, không phát hiện sâu hại.',      'offset' => 20],
+            ['hanh_dong' => 'Thu hoạch',        'mo_ta' => 'Thu hoạch vào sáng sớm và chuyển kho mát ngay.',      'offset' => 25],
         ];
 
         foreach ($logs as $log) {
             FarmingLog::create([
-                'batch_id'      => $batch->id,
-                'created_by'    => $farmStaff->id,
-                'activity_type' => $log['activity_type'],
-                'activity_date' => $log['activity_date'],
-                'title'         => $log['title'],
-                'description'   => $log['description'],
-                'media'         => [],
+                'batch_id'            => $batch->id,
+                'farm_staff_id'       => $farmStaff->id,
+                'hanh_dong'           => $log['hanh_dong'],
+                'mo_ta'               => $log['mo_ta'],
+                'hinh_anh_minh_chung' => null,
+                'thoi_gian'           => $planted->copy()->addDays($log['offset']),
+            ]);
+        }
+
+        if ($batch->certificates()->count() === 0) {
+            Certificate::create([
+                'batch_id'        => $batch->id,
+                'uploaded_by'     => $farmStaff->id,
+                'ten_chung_nhan'  => 'Chứng nhận VietGAP & Kiểm nghiệm dư lượng nông dược',
+                'file_minh_chung' => url('/truy-xuat/' . $batch->ma_lo),
+                'ngay_cap'        => $batch->ngay_thu_hoach->toDateString(),
+                'ngay_het_han'    => $batch->ngay_thu_hoach->copy()->addYear()->toDateString(),
+                'created_at'      => now(),
             ]);
         }
     }

@@ -8,13 +8,10 @@ use Throwable;
 
 class GenerateSubscriptionOrders extends Command
 {
-    // Tên và chữ ký lệnh trên terminal
     protected $signature = 'subscription:generate-orders';
 
-    // Mô tả ngắn gọn chức năng của lệnh
-    protected $description = 'Quét các gói định kỳ đến hạn giao hôm nay và tự động sinh đơn hàng con';
+    protected $description = 'Quét các lịch giao gói định kỳ đến hạn hôm nay và tự động sinh đơn hàng con';
 
-    // Thực thi lệnh console
     public function handle(SubscriptionService $subscriptionService): int
     {
         $this->info('[' . now()->toDateTimeString() . '] Bắt đầu tiến trình sinh đơn hàng gói định kỳ...');
@@ -24,13 +21,13 @@ class GenerateSubscriptionOrders extends Command
             $count = count($createdOrders);
 
             if ($count === 0) {
-                $this->info('Không có gói định kỳ nào đến lịch giao hôm nay.');
+                $this->info('Không có lịch giao gói định kỳ nào đến hạn hôm nay.');
                 return Command::SUCCESS;
             }
 
-            $this->info("Đã sinh thành công {$count} đơn hàng con cho kỳ giao hôm nay:");
+            $this->info("Đã sinh thành công {$count} đơn hàng con:");
             foreach ($createdOrders as $order) {
-                $this->line(" - Đơn hàng #{$order->order_code} (Gói #{$order->subscription_id}) - Khách hàng ID: {$order->user_id}");
+                $this->line(" - Đơn #{$order->ma_don} (Gói #{$order->subscription_id})");
             }
 
             return Command::SUCCESS;

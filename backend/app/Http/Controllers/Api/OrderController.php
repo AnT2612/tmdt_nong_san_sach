@@ -6,12 +6,12 @@ use App\Http\Controllers\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderService;
+use App\Services\ShippingService;
 use App\Services\VietQRService;
 use App\Services\VNPayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -19,175 +19,149 @@ class OrderController extends Controller
 
     public function __construct(
         private readonly OrderService $orderService,
+        private readonly ShippingService $shippingService,
         private readonly VNPayService $vnPayService,
         private readonly VietQRService $vietQrService,
     ) {
     }
 
-    // Đặt hàng
-    // Không bắt buộc đăng nhập => khách vãng lai (Guest) vẫn mua được
+    public function shippingFee(Request $request): JsonResponse
+    {
+        $diaChi = (string) $request->input('dia_chi_giao', '');
+        $subtotal = (float) $request->input('tam_tinh', 0);
+        $loaiGiao = (string) $request->input('loai_giao', Order::LOAI_GIAO_THUONG);
+        $lat = $request->filled('vi_do') ? (float) $request->input('vi_do') : null;
+        $lng = $request->filled('kinh_do') ? (float) $request->input('kinh_do') : null;
+
+        return $this->success(
+            $this->shippingService->calculate($diaChi, $subtotal, $loaiGiao, $lat, $lng),
+            'Tính phí vận chuyển thành công.'
+        );
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'receiver_name'    => ['required', 'string', 'max:100'],
-            'receiver_phone'   => ['required', 'string', 'max:20'],
-            'shipping_address' => ['required', 'string', 'max:255'],
-            'note'             => ['nullable', 'string', 'max:500'],
-            'payment_method'   => ['required', 'in:cod,vnpay,vietqr'],
-            'points_used'      => ['nullable', 'integer', 'min:0'],
+            'ten_nguoi_nhan'   => ['required', 'string', 'max:100'],
+            'so_dien_thoai'    => ['required', 'string', 'max:15'],
+            'email_nguoi_nhan' => ['nullable', 'email', 'max:150'],
+            'dia_chi_giao'     => ['required', 'string', 'max:255'],
+            'loai_giao'        => ['nullable', 'in:thuong,hoa_toc'],
+            'cong_thanh_toan'  => ['required', 'in:cod,momo,vnpay,vietqr'],
+            'diem_su_dung'     => ['nullable', 'integer', 'min:0'],
+            'vi_do'            => ['nullable', 'numeric'],
+            'kinh_do'          => ['nullable', 'numeric'],
 
-            'items'                => ['required', 'array', 'min:1'],
-            'items.*.product_id'   => ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity'     => ['required', 'numeric', 'min:0.001'],
+            'items'              => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity'   => ['required', 'numeric', 'min:0.01'],
         ], [
-            'receiver_name.required'    => 'Vui lòng nhập tên người nhận.',
-            'receiver_phone.required'   => 'Vui lòng nhập số điện thoại.',
-            'shipping_address.required' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'payment_method.required'   => 'Vui lòng chọn phương thức thanh toán.',
-            'items.required'            => 'Giỏ hàng đang trống.',
-            'items.min'                 => 'Giỏ hàng phải có ít nhất một sản phẩm.',
+            'ten_nguoi_nhan.required'  => 'Vui lòng nhập tên người nhận.',
+            'so_dien_thoai.required'   => 'Vui lòng nhập số điện thoại.',
+            'dia_chi_giao.required'    => 'Vui lòng nhập địa chỉ giao hàng.',
+            'cong_thanh_toan.required' => 'Vui lòng chọn cổng thanh toán.',
+            'items.required'           => 'Giỏ hàng đang trống.',
         ]);
 
-        /** @var \App\Models\User|null $customer */
         $customer = Auth::guard('api')->user();
-
         $order = $this->orderService->placeOrder($validated, $customer);
 
         $response = [
-            'order' => $order->load('items'),
+            'order' => $order->load(['orderDetails.product', 'orderDetails.batch', 'payments']),
         ];
 
-        // Nếu chọn VNPay thì tạo luôn đường dẫn thanh toán để Frontend chuyển trang.
-        if ($order->payment_method === Order::PAYMENT_VNPAY) {
+        if (($validated['cong_thanh_toan'] ?? 'cod') === 'vnpay') {
             $response['payment_url'] = $this->vnPayService->createPaymentUrl(
                 $order,
                 $request->ip() ?? '127.0.0.1',
             );
         }
 
-        // Nếu chọn VietQR thì tạo payload mã QR thanh toán để Frontend hiển thị quét mã tức thì.
-        if ($order->payment_method === Order::PAYMENT_VIETQR) {
+        if (($validated['cong_thanh_toan'] ?? 'cod') === 'vietqr') {
             $response['vietqr'] = $this->vietQrService->getVietQrPayload($order);
         }
 
-        return $this->success($response, 'Đặt hàng thành công. Vui lòng hoàn tất thanh toán hoặc chờ duyệt đơn.', 201);
+        return $this->success($response, 'Đặt hàng thành công.', 201);
     }
 
-    // Danh sách đơn của tôi
     public function index(Request $request): JsonResponse
     {
         $orders = Order::query()
             ->with([
-                'items',
-                'batchAllocations.batch:id,batch_code,product_id,harvest_date,expiry_date,traceability_token',
-                'batchAllocations.batch.product:id,name,unit,thumbnail_url',
+                'orderDetails.product:id,ten_san_pham,don_vi_tinh,hinh_anh_dai_dien',
+                'orderDetails.batch:id,ma_lo,ngay_thu_hoach,ngay_het_han,qr_code',
+                'payments',
             ])
-            ->withCount('items')
+            ->withCount('orderDetails')
             ->where('user_id', Auth::guard('api')->id())
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
-            ->latest()
+            ->when($request->filled('trang_thai'), fn ($q) => $q->where('trang_thai', $request->input('trang_thai')))
+            ->latest('ngay_tao')
             ->paginate(max(1, (int) $request->input('per_page', 10)));
 
         return $this->paginated($orders, 'Lấy danh sách đơn hàng thành công.');
     }
 
-    // Chi tiết đơn hàng
-    // Bao gồm cả các dòng phân bổ lô - đây là bằng chứng FEFO và chứa
-    // token để khách truy xuất nguồn gốc từng lô hàng đã nhận
     public function show(int $id): JsonResponse
     {
         $user = Auth::guard('api')->user();
+        $user?->loadMissing('role');
 
-        $query = Order::query()
-            ->with([
-                'items',
-                'batchAllocations.batch:id,batch_code,product_id,harvest_date,expiry_date,traceability_token',
-                'batchAllocations.batch.product:id,name,unit,thumbnail_url',
-                'payments',
-                'complaint',
-            ]);
+        $query = Order::query()->with([
+            'orderDetails.product:id,ten_san_pham,don_vi_tinh,hinh_anh_dai_dien',
+            'orderDetails.batch:id,ma_lo,ngay_thu_hoach,ngay_het_han,qr_code',
+            'orderDetails.complaints',
+            'payments',
+            'sourceComplaint',
+        ]);
 
-        // Nếu khách đăng nhập: chỉ xem đơn của mình (hoặc nhân viên có quyền)
         if ($user !== null) {
-            if (! in_array($user->role, ['sales', 'admin', 'warehouse_staff'], true)) {
+            if (! $user->hasRole('sales', 'admin', 'farm_staff')) {
                 $query->where('user_id', $user->id);
             }
         } else {
-            // Khách vãng lai: chỉ xem đơn không có tài khoản (user_id is null)
             $query->whereNull('user_id');
         }
 
         $order = $query->find($id);
-
         if ($order === null) {
             return $this->error('Không tìm thấy đơn hàng.', 404);
         }
 
-        // Bổ sung thông tin VietQR nếu đơn chọn phương thức VietQR
-        if ($order->payment_method === Order::PAYMENT_VIETQR) {
+        $latestPayment = $order->payments->first();
+        if ($latestPayment?->cong_thanh_toan === 'vietqr') {
             $order->setAttribute('vietqr', $this->vietQrService->getVietQrPayload($order));
         }
 
         return $this->success($order, 'Lấy chi tiết đơn hàng thành công.');
     }
 
-    // Mô phỏng sales duyệt đơn (Dành cho demo đồ án)
-    // Tự động chạy thuật toán FEFO phân bổ lô hàng để xem ngay mã QR truy xuất
     public function demoConfirm(int $id): JsonResponse
     {
         $order = Order::find($id);
-
         if ($order === null) {
             return $this->error('Không tìm thấy đơn hàng.', 404);
         }
 
-        if ($order->status !== Order::STATUS_PENDING) {
-            return $this->error('Đơn hàng này đã được duyệt hoặc đã xử lý trước đó.', 422);
-        }
-
-        // Tìm nhân viên sales hoặc admin đại diện duyệt đơn
-        $sales = \App\Models\User::where('role', 'sales')->first()
-            ?? \App\Models\User::where('role', 'admin')->first()
-            ?? Auth::guard('api')->user();
-
-        if ($sales === null) {
-            return $this->error('Không tìm thấy tài khoản nhân viên để duyệt đơn.', 422);
-        }
-
-        $order = $this->orderService->confirmOrder($order, $sales);
+        $order = $this->orderService->confirmOrder($order);
 
         return $this->success(
-            $order->fresh([
-                'items',
-                'batchAllocations.batch:id,batch_code,product_id,harvest_date,expiry_date,traceability_token',
-                'batchAllocations.batch.product:id,name,unit,thumbnail_url',
-                'payments',
-                'complaint',
-            ]),
-            'Mô phỏng Sales duyệt đơn thành công! Đã tự động phân bổ lô theo FEFO.'
+            $order->load(['orderDetails.product', 'orderDetails.batch', 'payments']),
+            'Duyệt đơn và phân bổ lô FEFO thành công!'
         );
     }
 
-    // Khách tự huỷ đơn
-    public function cancel(Request $request, int $id): JsonResponse
+    public function cancel(int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:255'],
-        ], [
-            'reason.required' => 'Vui lòng cho biết lý do huỷ đơn.',
-        ]);
-
         $order = Order::where('user_id', Auth::guard('api')->id())->find($id);
-
         if ($order === null) {
             return $this->error('Không tìm thấy đơn hàng.', 404);
         }
 
         if (! $order->canBeCancelled()) {
-            return $this->error('Đơn hàng đã được duyệt nên không thể tự huỷ. Vui lòng liên hệ CSKH.', 422);
+            return $this->error('Đơn hàng đã được duyệt nên không thể tự huỷ.', 422);
         }
 
-        $order = $this->orderService->cancelOrder($order, Auth::guard('api')->user(), $validated['reason']);
+        $order = $this->orderService->cancelOrder($order);
 
         return $this->success($order, 'Đã huỷ đơn hàng.');
     }

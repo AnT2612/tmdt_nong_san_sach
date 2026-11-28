@@ -1,0 +1,52 @@
+<?php
+
+
+namespace App\Http\Controllers\Concerns;
+
+use Illuminate\Http\JsonResponse;
+
+trait ApiResponse
+{
+    /**
+     * Trả về kết quả thành công.
+     */
+    protected function success(mixed $data = null, string $message = 'Thành công', int $statusCode = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data'    => $data,
+        ], $statusCode);
+    }
+
+    /**
+     * Trả về lỗi nghiệp vụ.
+     */
+    protected function error(string $message, int $statusCode = 400, mixed $errors = null): JsonResponse
+    {
+        return response()->json([
+            'status'  => 'error',
+            'success' => false,
+            'message' => $message,
+            'errors'  => $errors,
+        ], $statusCode);
+    }
+
+    /**
+     * Trả về danh sách có phân trang.
+     */
+    protected function paginated($paginator, string $message = 'Thành công'): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data'    => $paginator->items(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+}

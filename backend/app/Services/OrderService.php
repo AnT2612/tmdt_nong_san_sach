@@ -2,38 +2,32 @@
 
 namespace App\Services;
 
-use App\Models\Batch;
-use App\Models\InventoryTransaction;
-use App\Models\LoyaltyTransaction;
 use App\Models\Order;
-use App\Models\OrderBatchAllocation;
-use App\Models\OrderItem;
+use App\Models\OrderDetail;
 use App\Models\Payment;
+use App\Models\PointTransaction;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class OrderService
 {
     public function __construct(
-        private readonly InventoryService $inventoryService,
+        private readonly FefoService $fefoService,
         private readonly ShippingService $shippingService,
     ) {
     }
 
-    // Tạo đơn hàng mới
     public function placeOrder(array $data, ?User $customer = null): Order
     {
         return DB::transaction(function () use ($data, $customer) {
             $subtotal = 0.0;
             $preparedItems = [];
 
-            // --- Bước 1: kiểm tra từng sản phẩm và tính tiền tạm tính ---
             foreach ($data['items'] as $line) {
                 $product = Product::whereKey($line['product_id'])
-                    ->where('is_active', true)
+                    ->where('trang_thai', true)
                     ->first();
 
                 if ($product === null) {
@@ -42,310 +36,255 @@ class OrderService
                     ]);
                 }
 
-                $quantity = (float) $line['quantity'];
-
+                $quantity = round((float) $line['quantity'], 2);
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
-                        'items' => "Số lượng của {$product->name} phải lớn hơn 0.",
+                        'items' => "Số lượng của {$product->ten_san_pham} phải lớn hơn 0.",
                     ]);
                 }
 
-                // Kiểm tra tồn kho NGAY khi đặt để báo sớm cho khách.
-                // Tồn kho thật vẫn được trừ lại một lần nữa lúc Sales duyệt đơn.
-                $available = $product->totalAvailableQuantity();
-
-                if ($available < $quantity) {
-                    throw ValidationException::withMessages([
-                        'items' => "{$product->name} chỉ còn {$available} {$product->unit}, "
-                            . "không đủ {$quantity} {$product->unit}.",
-                    ]);
-                }
-
-                $unitPrice  = $product->currentPrice();
-                $lineTotal  = round($unitPrice * $quantity, 0);
-                $subtotal  += $lineTotal;
+                $unitPrice = $product->currentPrice();
+                $lineTotal = round($unitPrice * $quantity, 0);
+                $subtotal += $lineTotal;
 
                 $preparedItems[] = [
-                    'product'    => $product,
-                    'quantity'   => $quantity,
-                    'unit_price' => $unitPrice,
-                    'line_total' => $lineTotal,
+                    'product_id' => $product->id,
+                    'so_luong'   => $quantity,
+                    'don_gia'    => $unitPrice,
                 ];
             }
 
-            // --- Bước 2: tính phí giao hàng ---
-            $shippingFee = $this->shippingService->calculateFee($data['shipping_address'], $subtotal);
+            $deliveryType = $data['loai_giao'] ?? Order::LOAI_GIAO_THUONG;
 
-            // --- Bước 3: trừ điểm tích luỹ (nếu khách chọn dùng) ---
-            $pointsUsed     = 0;
-            $discountAmount = 0.0;
-
-            if ($customer !== null && ! empty($data['points_used'])) {
-                [$pointsUsed, $discountAmount] = $this->redeemPoints(
-                    $customer,
-                    (int) $data['points_used'],
-                    $subtotal + $shippingFee,
-                );
-            }
-
-            $totalAmount = max(0, round($subtotal + $shippingFee - $discountAmount, 0));
-
-            // --- Bước 4: lưu đơn hàng ---
             $order = Order::create([
-                'order_code'       => $this->generateOrderCode(),
-                'user_id'          => $customer?->id,
-                'subscription_id'  => $data['subscription_id'] ?? null,
-                'receiver_name'    => $data['receiver_name'],
-                'receiver_phone'   => $data['receiver_phone'],
-                'shipping_address' => $data['shipping_address'],
-                'note'             => $data['note'] ?? null,
-                'subtotal'         => $subtotal,
-                'shipping_fee'     => $shippingFee,
-                'discount_amount'  => $discountAmount,
-                'points_used'      => $pointsUsed,
-                'total_amount'     => $totalAmount,
-                'payment_method'   => $data['payment_method'],
-                'payment_status'   => 'unpaid',
-                'status'           => Order::STATUS_PENDING,
+                'ma_don'            => $this->generateOrderCode(),
+                'loai_don'          => $data['loai_don'] ?? Order::LOAI_DON_LE,
+                'user_id'           => $customer?->id,
+                'subscription_id'   => $data['subscription_id'] ?? null,
+                'complaint_id'      => $data['complaint_id'] ?? null,
+                'ten_nguoi_nhan'    => $data['ten_nguoi_nhan'],
+                'so_dien_thoai'     => $data['so_dien_thoai'],
+                'email_nguoi_nhan'  => $data['email_nguoi_nhan'] ?? $customer?->email,
+                'dia_chi_giao'      => $data['dia_chi_giao'],
+                'loai_giao'         => $deliveryType,
+                'phi_van_chuyen'    => 0,
+                'khoang_cach_km'    => 0,
+                'tong_tien'         => 0,
+                'diem_su_dung'      => 0,
+                'tien_giam_diem'    => 0,
+                'trang_thai'        => Order::STATUS_CHO_DUYET,
+                'ngay_giao_du_kien' => $data['ngay_giao_du_kien'] ?? now()->toDateString(),
             ]);
 
-            // --- Bước 5: lưu chi tiết đơn (ảnh chụp tên + giá) ---
-            foreach ($preparedItems as $item) {
-                OrderItem::create([
+            $this->fefoService->allocateAndDeduct($order, $preparedItems);
+
+            $actualSubtotal = (float) $order->orderDetails()->sum('thanh_tien');
+            $shipping = $this->shippingService->calculate(
+                $data['dia_chi_giao'],
+                $actualSubtotal,
+                $deliveryType,
+                isset($data['vi_do']) ? (float) $data['vi_do'] : null,
+                isset($data['kinh_do']) ? (float) $data['kinh_do'] : null,
+            );
+
+            $pointsUsed = 0;
+            $discountAmount = 0.0;
+            $requestedPoints = (int) ($data['diem_su_dung'] ?? 0);
+
+            if ($customer !== null && $requestedPoints > 0) {
+                $pointValue = (int) config('loyalty.point_value', 1000);
+                $pointsUsed = min($requestedPoints, (int) $customer->diem_tich_luy);
+                $maxByAmount = (int) floor(($actualSubtotal + $shipping['phi_van_chuyen']) / $pointValue);
+                $pointsUsed = max(0, min($pointsUsed, $maxByAmount));
+                $discountAmount = (float) ($pointsUsed * $pointValue);
+            }
+
+            $totalAmount = max(0, round($actualSubtotal + $shipping['phi_van_chuyen'] - $discountAmount, 0));
+
+            $order->update([
+                'phi_van_chuyen' => $shipping['phi_van_chuyen'],
+                'khoang_cach_km' => $shipping['khoang_cach_km'],
+                'tong_tien'      => $totalAmount,
+                'diem_su_dung'   => $pointsUsed,
+                'tien_giam_diem' => $discountAmount,
+            ]);
+
+            if ($customer !== null && $pointsUsed > 0) {
+                $customer->decrement('diem_tich_luy', $pointsUsed);
+                PointTransaction::create([
+                    'user_id'        => $customer->id,
                     'order_id'       => $order->id,
-                    'product_id'     => $item['product']->id,
-                    'product_name'   => $item['product']->name,
-                    'product_unit'   => $item['product']->unit,
-                    'unit_price'     => $item['unit_price'],
-                    'quantity'       => $item['quantity'],
-                    'line_total'     => $item['line_total'],
+                    'loai_giao_dich' => PointTransaction::LOAI_TRU,
+                    'so_diem'        => $pointsUsed,
+                    'mo_ta'          => "Dùng {$pointsUsed} điểm cho đơn {$order->ma_don}.",
+                    'ngay_tao'       => now(),
                 ]);
             }
 
-            return $order->load('items');
+            Payment::create([
+                'order_id'        => $order->id,
+                'cong_thanh_toan' => $data['cong_thanh_toan'] ?? Payment::CONG_COD,
+                'so_tien'         => $totalAmount,
+                'trang_thai'      => Payment::STATUS_CHO,
+                'created_at'      => now(),
+            ]);
+
+            return $order->load(['orderDetails.product', 'orderDetails.batch', 'payments']);
         });
     }
 
-    // Sales duyệt đơn - đây là lúc thuật toán FEFO thực sự chạy
-    public function confirmOrder(Order $order, User $sales): Order
+    public function confirmOrder(Order $order): Order
     {
-        if ($order->status !== Order::STATUS_PENDING) {
+        if ($order->trang_thai !== Order::STATUS_CHO_DUYET) {
             throw ValidationException::withMessages([
-                'status' => 'Chỉ có thể duyệt đơn đang ở trạng thái chờ xử lý.',
+                'trang_thai' => 'Chỉ có thể duyệt đơn đang ở trạng thái chờ duyệt.',
             ]);
         }
 
-        return DB::transaction(function () use ($order, $sales) {
-            $order->load('items.product');
-
-            // Duyệt từng dòng hàng: chia lô theo FEFO rồi trừ kho.
-            foreach ($order->items as $item) {
-                $product = $item->product;
-                $need    = (float) $item->quantity;
-
-                try {
-                    // Bước A: lên kế hoạch lấy hàng từ những lô nào.
-                    $allocation = $this->inventoryService->planFefoAllocation($product, $need);
-
-                    // Bước B: trừ kho thật và ghi thẻ kho.
-                    $applied = $this->inventoryService->decreaseStock($allocation, $order->id, $sales);
-                } catch (RuntimeException $exception) {
-                    // Thiếu hàng => huỷ toàn bộ transaction, đơn giữ nguyên pending.
-                    throw ValidationException::withMessages([
-                        'inventory' => $exception->getMessage(),
-                    ]);
-                }
-
-                // Bước C: lưu lại bằng chứng FEFO cho từng lô đã lấy.
-                foreach ($applied as $batchId => $detail) {
-                    OrderBatchAllocation::create([
-                        'order_id'      => $order->id,
-                        'order_item_id' => $item->id,
-                        'batch_id'      => $batchId,
-                        'quantity'      => $detail['quantity'],
-                    ]);
-                }
-
-                // Bước D: đánh dấu dòng hàng đã chuẩn bị đủ.
-                $item->quantity_prepared = $need;
-                $item->save();
+        return DB::transaction(function () use ($order) {
+            if ($order->orderDetails()->whereNull('batch_id')->exists()) {
+                $this->fefoService->allocateAndDeduct($order);
             }
 
-            $order->status       = Order::STATUS_CONFIRMED;
-            $order->confirmed_at = now();
+            $order->trang_thai = Order::STATUS_DA_DUYET;
             $order->save();
 
-            return $order->fresh(['items', 'batchAllocations.batch']);
+            return $order->fresh(['orderDetails.product', 'orderDetails.batch', 'payments']);
         });
     }
 
-    // Huỷ đơn hàng
-    // Nếu đơn đã trừ kho rồi thì phải HOÀN HÀNG về đúng lô đã lấy
-    public function cancelOrder(Order $order, User $actor, string $reason): Order
+    public function updateStatus(Order $order, string $newStatus): Order
     {
-        if (in_array($order->status, [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED], true)) {
+        return match ($newStatus) {
+            Order::STATUS_DA_DUYET   => $this->confirmOrder($order),
+            Order::STATUS_DANG_GIAO  => $this->markShipping($order),
+            Order::STATUS_HOAN_THANH => $this->markDelivered($order),
+            Order::STATUS_DA_HUY     => $this->cancelOrder($order),
+            default => throw ValidationException::withMessages([
+                'trang_thai' => 'Trạng thái đơn hàng không hợp lệ.',
+            ]),
+        };
+    }
+
+    public function markShipping(Order $order): Order
+    {
+        if ($order->trang_thai !== Order::STATUS_DA_DUYET) {
             throw ValidationException::withMessages([
-                'status' => 'Đơn đã giao hoặc đã huỷ thì không thể huỷ thêm.',
+                'trang_thai' => 'Chỉ có thể chuyển giao những đơn đã duyệt.',
             ]);
         }
 
-        return DB::transaction(function () use ($order, $actor, $reason) {
-            // Nếu đơn đã được duyệt (đã trừ kho) thì hoàn hàng lại.
-            if ($order->status === Order::STATUS_CONFIRMED) {
-                $this->restoreAllocatedStock($order, $actor);
-            }
+        $order->trang_thai = Order::STATUS_DANG_GIAO;
+        $order->save();
 
-            $order->status        = Order::STATUS_CANCELLED;
-            $order->cancelled_at  = now();
-            $order->cancel_reason = $reason;
-            $order->save();
-
-            // Hoàn lại điểm đã dùng cho đơn này.
-            if ($order->points_used > 0 && $order->user_id !== null) {
-                $customer = User::find($order->user_id);
-
-                if ($customer !== null) {
-                    $customer->increment('loyalty_points', $order->points_used);
-
-                    LoyaltyTransaction::create([
-                        'user_id'     => $customer->id,
-                        'type'        => LoyaltyTransaction::TYPE_ADJUST,
-                        'points'      => $order->points_used,
-                        'order_id'    => $order->id,
-                        'description' => 'Hoàn điểm do huỷ đơn hàng.',
-                    ]);
-                }
-            }
-
-            return $order->fresh();
-        });
+        return $order->fresh();
     }
 
-    // Giao hàng thành công - điểm tích luỹ được cộng ở đây
-    public function markDelivered(Order $order, User $sales): Order
+    public function markDelivered(Order $order): Order
     {
-        return DB::transaction(function () use ($order, $sales) {
-            $order->status       = Order::STATUS_DELIVERED;
-            $order->delivered_at = now();
+        if (! in_array($order->trang_thai, [Order::STATUS_DA_DUYET, Order::STATUS_DANG_GIAO], true)) {
+            throw ValidationException::withMessages([
+                'trang_thai' => 'Đơn hàng chưa ở trạng thái hợp lệ để xác nhận hoàn thành.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($order) {
+            $order->trang_thai = Order::STATUS_HOAN_THANH;
             $order->save();
 
-            // Đơn COD coi như thanh toán xong khi giao thành công.
-            if ($order->payment_method === Order::PAYMENT_COD) {
-                $order->payment_status = 'paid';
-                $order->save();
+            $latestPayment = $order->payments()->first();
+            if ($latestPayment !== null && $latestPayment->cong_thanh_toan === Payment::CONG_COD && $latestPayment->trang_thai === Payment::STATUS_CHO) {
+                $latestPayment->trang_thai = Payment::STATUS_THANH_CONG;
+                $latestPayment->save();
+            }
 
-                Payment::create([
-                    'order_id' => $order->id,
-                    'method'   => Order::PAYMENT_COD,
-                    'amount'   => $order->total_amount,
-                    'status'   => Payment::STATUS_SUCCESS,
-                    'paid_at'  => now(),
-                ]);
+            if ($order->deliverySchedule !== null) {
+                $order->deliverySchedule->trang_thai = 'da_giao';
+                $order->deliverySchedule->save();
             }
 
             $this->awardLoyaltyPoints($order);
 
+            return $order->fresh(['orderDetails.product', 'orderDetails.batch', 'payments']);
+        });
+    }
+
+    public function cancelOrder(Order $order): Order
+    {
+        if (in_array($order->trang_thai, [Order::STATUS_HOAN_THANH, Order::STATUS_DA_HUY], true)) {
+            throw ValidationException::withMessages([
+                'trang_thai' => 'Đơn đã hoàn thành hoặc đã hủy thì không thể hủy thêm.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($order) {
+            if ($order->orderDetails()->whereNotNull('batch_id')->exists()) {
+                $this->fefoService->restoreOrderStock($order);
+            }
+
+            $order->trang_thai = Order::STATUS_DA_HUY;
+            $order->save();
+
+            if ($order->diem_su_dung > 0 && $order->user_id !== null) {
+                $customer = User::find($order->user_id);
+                if ($customer !== null) {
+                    $customer->increment('diem_tich_luy', $order->diem_su_dung);
+                    PointTransaction::create([
+                        'user_id'        => $customer->id,
+                        'order_id'       => $order->id,
+                        'loai_giao_dich' => PointTransaction::LOAI_HOAN,
+                        'so_diem'        => $order->diem_su_dung,
+                        'mo_ta'          => "Hoàn điểm do hủy đơn {$order->ma_don}.",
+                        'ngay_tao'       => now(),
+                    ]);
+                }
+            }
+
             return $order->fresh();
         });
     }
 
-    // Cộng điểm tích luỹ sau khi đơn giao thành công
-    // Quy tắc: mỗi 10.000đ được 1 điểm (đọc từ config).
     private function awardLoyaltyPoints(Order $order): void
     {
-        if ($order->user_id === null) {
-            return; // Khách vãng lai không có tài khoản để cộng điểm.
+        if ($order->user_id === null || $order->loai_don === Order::LOAI_GIAO_BU) {
+            return;
         }
 
         $divisor = (int) config('loyalty.earn_divisor', 10000);
-        $points  = (int) floor((float) $order->subtotal / $divisor);
+        $productTotal = max(0.0, (float) $order->tong_tien - (float) $order->phi_van_chuyen);
+        $points = (int) floor($productTotal / $divisor);
 
         if ($points <= 0) {
             return;
         }
 
+        $alreadyEarned = PointTransaction::where('order_id', $order->id)
+            ->where('loai_giao_dich', PointTransaction::LOAI_CONG)
+            ->exists();
+
+        if ($alreadyEarned) {
+            return;
+        }
+
         $customer = User::find($order->user_id);
-        $customer->increment('loyalty_points', $points);
-
-        LoyaltyTransaction::create([
-            'user_id'     => $customer->id,
-            'type'        => LoyaltyTransaction::TYPE_EARN,
-            'points'      => $points,
-            'order_id'    => $order->id,
-            'description' => "Tích điểm từ đơn {$order->order_code}.",
-        ]);
-    }
-
-    // Trừ điểm khi khách dùng điểm giảm giá
-    private function redeemPoints(User $customer, int $requestedPoints, float $maxPayable): array
-    {
-        $pointValue = (int) config('loyalty.point_value', 1000);
-
-        // Không cho dùng quá số điểm đang có.
-        $pointsUsed = min($requestedPoints, $customer->loyalty_points);
-
-        // Không cho giảm quá giá trị đơn hàng.
-        $maxByAmount    = (int) floor($maxPayable / $pointValue);
-        $pointsUsed     = max(0, min($pointsUsed, $maxByAmount));
-        $discountAmount = (float) ($pointsUsed * $pointValue);
-
-        if ($pointsUsed > 0) {
-            $customer->decrement('loyalty_points', $pointsUsed);
-
-            LoyaltyTransaction::create([
-                'user_id'     => $customer->id,
-                'type'        => LoyaltyTransaction::TYPE_REDEEM,
-                'points'      => -$pointsUsed,
-                'description' => "Dùng {$pointsUsed} điểm để giảm giá đơn hàng.",
-            ]);
-        }
-
-        return [$pointsUsed, $discountAmount];
-    }
-
-    // Hoàn hàng về lô khi huỷ đơn đã duyệt
-    private function restoreAllocatedStock(Order $order, User $actor): void
-    {
-        $allocations = OrderBatchAllocation::where('order_id', $order->id)->get();
-
-        foreach ($allocations as $allocation) {
-            $batch = Batch::whereKey($allocation->batch_id)->lockForUpdate()->first();
-
-            if ($batch === null) {
-                continue;
-            }
-
-            $batch->quantity_available = round(
-                (float) $batch->quantity_available + (float) $allocation->quantity,
-                3
-            );
-
-            // Lô trước đó bị đánh dấu hết hàng thì mở lại để bán tiếp.
-            if ($batch->status === Batch::STATUS_DEPLETED) {
-                $batch->status = Batch::STATUS_AVAILABLE;
-            }
-
-            $batch->save();
-
-            InventoryTransaction::create([
-                'batch_id'      => $batch->id,
-                'type'          => InventoryTransaction::TYPE_ADJUST,
-                'quantity'      => $allocation->quantity,
-                'balance_after' => $batch->quantity_available,
-                'order_id'      => $order->id,
-                'created_by'    => $actor->id,
-                'note'          => "Hoàn hàng do huỷ đơn {$order->order_code}.",
+        if ($customer !== null) {
+            $customer->increment('diem_tich_luy', $points);
+            PointTransaction::create([
+                'user_id'        => $customer->id,
+                'order_id'       => $order->id,
+                'loai_giao_dich' => PointTransaction::LOAI_CONG,
+                'so_diem'        => $points,
+                'mo_ta'          => "Tích điểm từ đơn {$order->ma_don}.",
+                'ngay_tao'       => now(),
             ]);
         }
     }
 
-    // Sinh mã đơn dạng ORD-20261115-0001, dễ đọc khi bảo vệ đồ án
     private function generateOrderCode(): string
     {
         $prefix = 'ORD-' . now()->format('Ymd') . '-';
+        $count = Order::whereDate('ngay_tao', now()->toDateString())->count() + 1;
 
-        $todayCount = Order::whereDate('created_at', now()->toDateString())->count() + 1;
-
-        return $prefix . str_pad((string) $todayCount, 4, '0', STR_PAD_LEFT);
+        return $prefix . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
     }
 }

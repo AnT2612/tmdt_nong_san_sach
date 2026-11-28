@@ -1,0 +1,143 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #ffffff;
+    color: #111111;
+    line-height: 1.5;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 24px;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-top: 30px;
+    border-bottom: 1px solid #999999;
+    padding-bottom: 5px;
+}
+
+h3 {
+    font-size: 15px;
+    margin-top: 18px;
+    margin-bottom: 6px;
+}
+
+a {
+    color: #000000;
+}
+
+.info-box {
+    border: 1px solid #000000;
+    background-color: #f7f7f7;
+    padding: 12px 15px;
+    margin: 15px 0;
+}
+
+.info-box p {
+    margin: 0 0 6px 0;
+}
+
+.info-box p:last-child {
+    margin: 0;
+}
+
+.menu {
+    border: 1px solid #cccccc;
+    padding: 10px 15px;
+    background-color: #fafafa;
+    margin-bottom: 20px;
+}
+
+.menu ul {
+    margin: 5px 0 0 18px;
+    padding: 0;
+}
+
+.menu li {
+    margin-bottom: 4px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+th, td {
+    border: 1px solid #cccccc;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background-color: #eeeeee;
+    font-weight: bold;
+}
+
+code {
+    font-family: Consolas, "Courier New", monospace;
+    background-color: #f2f2f2;
+    padding: 1px 4px;
+    border: 1px solid #dddddd;
+    font-size: 13px;
+}
+
+pre {
+    font-family: Consolas, "Courier New", monospace;
+    background-color: #f4f4f4;
+    border: 1px solid #cccccc;
+    padding: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    margin: 6px 0 12px 0;
+}
+
+.method {
+    display: inline-block;
+    font-family: Consolas, "Courier New", monospace;
+    font-weight: bold;
+    font-size: 12px;
+    border: 1px solid #000000;
+    padding: 2px 6px;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.method-dark {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+details {
+    border: 1px solid #cccccc;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    background-color: #ffffff;
+}
+
+summary {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.footer {
+    margin-top: 40px;
+    padding-top: 12px;
+    border-top: 1px solid #cccccc;
+    font-size: 13px;
+    color: #444444;
+}
