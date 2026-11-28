@@ -2,6 +2,33 @@
 
 namespace App\Models;
 
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Complaint extends Model
+{
+    use HasFactory;
+
+    public const STATUS_PENDING          = 'pending';
+    public const STATUS_APPROVED_REFUND  = 'approved_refund';
+    public const STATUS_APPROVED_REPLACE = 'approved_replace';
+    public const STATUS_REJECTED         = 'rejected';
+
+    protected $fillable = [
+        'complaint_code',
+        'order_id',
+        'user_id',
+        'reason',
+        'description',
+        'evidence_media',
+        'status',
+        'refund_amount',
+        'staff_note',
+        'handled_by',
+        'handled_at',
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,11 +55,23 @@ class Complaint extends Model
         'so_tien_hoan',
         'trang_thai',
         'xu_ly_boi',
+
     ];
 
     protected function casts(): array
     {
         return [
+
+            'evidence_media' => 'array',
+            'refund_amount'  => 'decimal:0',
+            'handled_at'     => 'datetime',
+        ];
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+
             'so_tien_hoan' => 'decimal:0',
         ];
     }
@@ -40,6 +79,7 @@ class Complaint extends Model
     public function orderDetail(): BelongsTo
     {
         return $this->belongsTo(OrderDetail::class, 'order_detail_id');
+
     }
 
     public function customer(): BelongsTo
@@ -49,11 +89,15 @@ class Complaint extends Model
 
     public function handler(): BelongsTo
     {
+
+        return $this->belongsTo(User::class, 'handled_by');
+
         return $this->belongsTo(User::class, 'xu_ly_boi');
     }
 
     public function replacementOrder(): HasOne
     {
         return $this->hasOne(Order::class, 'complaint_id');
+
     }
 }

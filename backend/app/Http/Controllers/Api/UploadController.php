@@ -1,5 +1,7 @@
 <?php
 
+
+
 /**
  * NGƯỜI PHỤ TRÁCH: Trần Quốc Khánh (Nhóm trưởng - 0306241206)
  * PHỐI HỢP: Trần Thanh An (0306241171 - Khiếu nại), Nguyễn Thanh Liêm (0306241214 - Nhật ký canh tác)
@@ -14,6 +16,7 @@
  *     - Kế hoạch rủi ro kỹ thuật (Tuần 1): Nếu chưa cấu hình Cloudinary hoặc lỗi mạng,
  *       hệ thống tự động lưu vào storage cục bộ (local fallback) để đảm bảo không gián đoạn đồ án.
  */
+
 
 namespace App\Http\Controllers\Api;
 
@@ -30,12 +33,16 @@ class UploadController extends Controller
 {
     use ApiResponse;
 
+
+    // Tải lên tệp minh chứng (ảnh hoặc video)
+
     /**
      * TẢI LÊN TỆP MINH CHỨNG (ẢNH HOẶC VIDEO).
      *
      * @param Request $request
      * @return JsonResponse
      */
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
